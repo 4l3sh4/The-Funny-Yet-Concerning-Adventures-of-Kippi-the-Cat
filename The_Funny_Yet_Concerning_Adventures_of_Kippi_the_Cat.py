@@ -8,50 +8,55 @@
 
 #we use this to do all the random chances that is involved in our game. makes it more fun, hehe!
 import random
-#we use this so that our players can quit the game gracefully
+#we use this so that our players can quit the game gracefully!
 import os
-#for our save files
+#for our save files!
 import json
 
 game_state = True
 intro_screen = True
 game_start = False
+continue_game = False
 
 while game_state == True:
     #kippi
     #dictionary ver.
-    kippi_stats_dictionary = {'LVL': 1, 'EXP' : 0, 'EXP TO LVL UP' : 1, 'HP': 10, 'ATK': 3, 'DEF': 1, 'SPD' : 1}
+    kippi_stats_dictionary = {'LVL': 0, 'EXP' : 0, 'EXP TO LVL UP' : 1, 'HP': 10, 'ATK': 3, 'DEF': 1, 'SPD' : 1}
 
     #list ver.
     kippi_stats_perm = list(kippi_stats_dictionary.values()) #limit, important for level up, doesn't change when kippi gets attacked
     kippi_stats = list(kippi_stats_dictionary.values()) #the only stats that changes when kippi gets attacked
         
     #intro sceeen
-    start_options = ['play', 'continue', 'credit', 'quit']
+    start_options = ['play', 'continue', 'quit']
     yes_or_no = ['yes', 'no']
 
+    #omg we finally fixed the save function
+    #explanation for what we changed:
+    #deleted last_played_location (discovered that kippi_stats[0] plays the same function anyway)
+    #made the introduction be able to print ONLY IF kippi's level == 0 to avoid having the player go through the intro all over again when they boot up their save file lol
+    #added meanie_counter onto the list of things to be saved since it's required for the bad ending (spoilers oops)
     def load_checkpoint(file_path):
         try:
             with open(file_path, 'r') as kippi_save:
                 data = kippi_save.readlines()                
                 player_name = data[0].split(": ")[1].strip()
                 kippi_stats = json.loads(data[1].split(": ")[1].strip())
-                last_played_location = data[2].split(": ")[1].strip()
-                inventory = [item.strip() for item in data[3].split(": ")[1].split(',')] if len(data) > 3 else []
-                head = [item.strip() for item in data[4].split(": ")[1].split(',')] if len(data) > 4 else []
-                body = [item.strip() for item in data[5].split(": ")[1].split(',')] if len(data) > 5 else []
-                feet = [item.strip() for item in data[6].split(": ")[1].split(',')] if len(data) > 6 else []
-                hand = [item.strip() for item in data[7].split(": ")[1].split(',')] if len(data) > 7 else []
-
+                inventory = [item.strip() for item in data[2].split(": ")[1].split(',')] if len(data) > 2 else []
+                head = [item.strip() for item in data[3].split(": ")[1].split(',')] if len(data) > 3 else []
+                body = [item.strip() for item in data[4].split(": ")[1].split(',')] if len(data) > 4 else []
+                feet = [item.strip() for item in data[5].split(": ")[1].split(',')] if len(data) > 5 else []
+                hand = [item.strip() for item in data[6].split(": ")[1].split(',')] if len(data) > 6 else []
+                meanie_counter = data[7].split(": ")[1].strip()
                 return {
                     "player_name": player_name,
                     "kippi_stats": kippi_stats,
-                    "last_played_location": last_played_location,
                     "inventory": inventory,
                     "head": head,
                     "body": body,
                     "feet": feet,
-                    "hand": hand
+                    "hand": hand,
+                    "meanie_counter": meanie_counter
                 }
         except FileNotFoundError:
             return None
@@ -64,30 +69,54 @@ while game_state == True:
             start_input = input("[ Input not recognised. Please try again! ]\n")
             start_input = start_input.lower()
         if start_input == 'play':
-            intro_screen = False
-            game_start = True
-            last_played_location = "Intro"
+            file_path = "kippi_save.txt"
+            checkpoint_data = load_checkpoint(file_path)
+            if checkpoint_data is not None:
+                start_input = input("[ WARNING! You've been through an adventure in the past. Are you sure you'd like to overwrite your old save file? ]\n")
+                start_input = start_input.lower()
+                while start_input not in yes_or_no:
+                    start_input = input("[ Input not recognised. Please try again! ]\n")
+                    start_input = start_input.lower()
+                if start_input == 'yes':
+                    player_name = None
+                    kippi_stats = list(kippi_stats_dictionary.values())
+                    inventory = []                
+                    head = []
+                    body = []
+                    feet = []
+                    hand = []
+                    meanie_counter = 0
+                    intro_screen = False
+                    game_start = True
+                    game_start = True
+                    continue_game = False
+                elif start_input == 'no':
+                    continue
+            else:
+                intro_screen = False
+                game_start = True
+                continue_game = False
         if start_input == 'continue':
             file_path = "kippi_save.txt"
             checkpoint_data = load_checkpoint(file_path)
             if checkpoint_data is not None:
                 player_name = checkpoint_data["player_name"]
                 kippi_stats = checkpoint_data["kippi_stats"]
-                last_played_location = checkpoint_data["last_played_location"]
                 inventory = checkpoint_data["inventory"]                
                 head = checkpoint_data["head"]
                 body = checkpoint_data["body"]
                 feet = checkpoint_data["feet"]
                 hand = checkpoint_data["hand"]
-                print(f"[Welcome back, {player_name}! You are on Level {kippi_stats[0]}]")
-                print(f"[ You are now at {last_played_location}! ]")
+                meanie_counter = checkpoint_data["meanie_counter"]
+                print(f"[Welcome back, {player_name}! You are at LEVEL {kippi_stats[0]}!]")
                 intro_screen = False
                 game_start = True
                 continue_game = True
             else:
-                print(f"[Uh oh, no save game found. Starting a new game...]")
+                print(f"[Uh oh, no save file found! Starting a new game...]")
                 intro_screen = False
                 game_start = True
+                continue_game = False
         if start_input == 'quit':
             os._exit(os.EX_OK) #os code
 
@@ -152,7 +181,7 @@ while game_state == True:
 
             #armour categories
             head_armour = ['TRAFFIC CONE','SUNGLASSES','STRAW HAT','COCONUT SHELL','SQUID HAT',"JESTER'S HAT",'PROPELLER HAT','ORIGAMI HAT','FISHBOWL','LUMINARA LENSES','CROWN OF THE FALLEN']
-            body_armour = ['HULA HOOP','BOWTIE','STRIPPED TIE','TUTU','POTATO SACK','FEATHER BOAS','CAPE','FRILLY APRON','FLAMINGO FLOATIE','AMULET OF THE INFERNAL BLAZE',"ECLIPSE O' CLOCK CLOAK"]
+            body_armour = ['HULA HOOP','BOWTIE','STRIPED TIE','TUTU','POTATO SACK','FEATHER BOAS','CAPE','FRILLY APRON','FLAMINGO FLOATIE','AMULET OF THE INFERNAL BLAZE',"ECLIPSE O' CLOCK CLOAK"]
             feet_armour = ['MISMATCHED SOCKS','SPRING BOOTS','SWIFTSHADOW BOOTS']
 
             #consumables
@@ -356,13 +385,12 @@ while game_state == True:
                 with open(file_path, 'w') as kippi_save:
                     kippi_save.write(f"Player: {player_name}\n")
                     kippi_save.write(f"Stats: {kippi_stats}\n")
-                    kippi_save.write(f"Last Played Location: {last_played_location}\n")   
-
                     kippi_save.write(f"Inventory: {', '.join(inventory)}\n" if inventory else "Inventory: \n")
                     kippi_save.write(f"Head: {', '.join(head)}\n" if head else "Head: \n")
                     kippi_save.write(f"Body: {', '.join(body)}\n" if body else "Body: \n")
                     kippi_save.write(f"Feet: {', '.join(feet)}\n" if feet else "Feet: \n")
                     kippi_save.write(f"Hand: {', '.join(hand)}\n" if hand else "Hand: \n")
+                    kippi_save.write(f"Meanie Points: {meanie_counter}")
             
             def level_up_mechanic():
                 level_up_print = True
@@ -624,14 +652,14 @@ while game_state == True:
                                     if kippi_stats[3] != kippi_stats_perm[3]:
                                         kippi_stats[3] += inspect_items[2]
                                         if kippi_stats[3] < kippi_stats_perm[3]:
-                                            print(f" [ Yum, yum! {player_name}'s tummy is satisfied! ]")
-                                            print(f" [ {player_name}'s health went up to {kippi_stats[3]}! ]")
+                                            print(f"[ Yum, yum! {player_name}'s tummy is satisfied! ]")
+                                            print(f"[ {player_name}'s health went up to {kippi_stats[3]}! ]")
                                         if kippi_stats[3] >= kippi_stats_perm[3]:
                                             kippi_stats[3] = kippi_stats_perm[3]
-                                            print(f" [ {player_name} smiles as they munch on their {inspect_items[0]}! ]")
-                                            print(f" [ {player_name} has fully recovered! ]")
+                                            print(f"[ {player_name} smiles as they munch on their {inspect_items[0]}! ]")
+                                            print(f"[ {player_name} has fully recovered! ]")
                                     else:
-                                        print(f" [ Gosh, {player_name} feels absolutely stuffed!  They only took a few bites of the {inspect_items[0]} before throwing it away! ]")
+                                        print(f"[ Gosh, {player_name} feels absolutely stuffed!  They only took a few bites of the {inspect_items[0]} before throwing it away! ]")
                                 elif eat_choice == 'no':
                                     delete_item = input(f"[ Would you like to THROW AWAY {inspect_items[0]}? ]\n")
                                     delete_item = delete_item.lower()
@@ -664,6 +692,8 @@ while game_state == True:
                                     inspect_items = item_39
                                 elif inspect_items == item_40[0]:
                                     inspect_items = item_40
+                                print(f'[ {inspect_items[0]} ]')
+                                print(f'[ {inspect_items[1]} ]\n')
                                 eat_choice = input("[ Would you like to EAT it? ]\n")
                                 eat_choice = eat_choice.lower()
                                 while eat_choice not in yes_or_no:
@@ -671,7 +701,7 @@ while game_state == True:
                                     eat_choice = eat_choice.lower()
                                 if eat_choice == 'yes':
                                     inventory.remove(inspect_items[0])
-                                    print(f" [ {player_name} feels much stronger after eating the {inspect_items[0]}! ]")
+                                    print(f"[ {player_name} feels much stronger after eating the {inspect_items[0]}! ]")
                                     kippi_stats_perm[4] += inspect_items[2]
                                     kippi_stats_perm[5] += inspect_items[3]
                                     kippi_stats_perm[6] += inspect_items[4]
@@ -713,11 +743,11 @@ while game_state == True:
                                     inventory.remove(inspect_items[0])
                                     kippi_stats[3] -= inspect_items[2]
                                     if kippi_stats[3] <= 0:
-                                        print(f" [ Uh oh! {player_name} doesn't feel too good... ]")
-                                        print(" [ Quickly, eat something else before you faint! ]\n")
+                                        print(f"[ Uh oh! {player_name} doesn't feel too good... ]")
+                                        print("[ Quickly, eat something else before you faint! ]\n")
                                     if kippi_stats[3] > 0:
-                                        print(f" [ Yuck! The {inspect_items[0]} does not taste great at all! ]")
-                                        print(f" [ {player_name}'s health went down to {kippi_stats[3]}! ]\n")
+                                        print(f"[ Yuck! The {inspect_items[0]} does not taste great at all! ]")
+                                        print(f"f[ {player_name}'s health went down to {kippi_stats[3]}! ]\n")
                                 elif eat_choice == 'no':
                                     delete_item = input(f"[ Would you like to THROW AWAY {inspect_items[0]}? ]\n")
                                     delete_item = delete_item.lower()
@@ -833,28 +863,37 @@ while game_state == True:
                 elif kippi_stats[3] <= (kippi_stats_perm[3] / 2):
                     print(f"\n[ {player_name} isn't doing so great... ]\n")
                 else:
-                    print(f"\n[ {player_name} is doing fine! ]\n")
+                    print(f"[ {player_name} is doing fine! ]\n")
 
             def item_drop_common(percentage):
                 item_drop = random.randint(1,percentage)
+                item = random.choice(common_items)
                 if item_drop == 1: #item drop
-                    item = random.choice(common_items)
                     print(f"[ A {item} was dropped! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                    inventory.append(item)
+                    if len(inventory) < 20:
+                        inventory.append(item)
+                    else:
+                        print(f"But... Uh oh! Your backpack seems to be LOADED with too many knick-knacks! It seems like you'd have to bid goodbye to {item} then...")
 
             def item_drop_uncommon(percentage):
                 item_drop = random.randint(1,percentage)
+                item = random.choice(uncommon_items)
                 if item_drop == 1: #item drop
-                    item = random.choice(uncommon_items)
                     print(f"[ A {item} was dropped! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                    inventory.append(item)
+                    if len(inventory) < 20:
+                        inventory.append(item)
+                    else:
+                        print(f"But... Uh oh! Your backpack seems to be LOADED with too many knick-knacks! It seems like you'd have to bid goodbye to {item} then...")
 
             def item_drop_rare(percentage):
                 item_drop = random.randint(1,percentage)
+                item = random.choice(rare_items)
                 if item_drop == 1: #item drop
-                    item = random.choice(rare_items)
                     print(f"[ A {item} was dropped! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                    inventory.append(item)
+                    if len(inventory) < 20:
+                        inventory.append(item)
+                    else:
+                        print(f"But... Uh oh! Your backpack seems to be LOADED with too many knick-knacks! It seems like you'd have to bid goodbye to {item} then...")
 
             #status conditions
             def kippi_poisoned():
@@ -876,19 +915,43 @@ while game_state == True:
                 while deciding_direction == True :
                     direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ] [ CHECK SELF ]\n")
                     direction_choice = direction_choice.lower()
-                    while 'inventory' not in direction_choice and 'self' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
+                    while 'inventory' not in direction_choice and 'self' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice and not direction_choice == 'i' and not direction_choice == 's' and not direction_choice == 'r' and not direction_choice == 'l' and not direction_choice == 'f':
                             direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
                             direction_choice = direction_choice.lower()
-                    if 'inventory' in direction_choice:
+                    if 'inventory' in direction_choice or direction_choice == 'i':
                         inventory_check()
-                    elif 'self' in direction_choice:
+                    elif 'self' in direction_choice or direction_choice == 's':
                         self_check()
-                    elif 'right' in direction_choice:
+                    elif 'right' in direction_choice or direction_choice == 'r':
                         break
-                    elif 'left' in direction_choice:
+                    elif 'left' in direction_choice or direction_choice == 'l':
                         break
-                    elif 'forward' in direction_choice:
+                    elif 'forward' in direction_choice or direction_choice == 'f':
                         break
+            def game_over_mechanic():
+                global intro_screen
+                global game_start
+                print(f"[ {player_name} fainted! ]")
+                print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                game_over = input("[ Would you like to try again? ]\n")
+                game_over = game_over.lower()
+                while game_over not in yes_or_no:
+                    game_over = input("[ Input not recognised. Please try again! ]")
+                    game_over = game_over.lower()
+                if game_over == 'yes':
+                    if os.path.exists("kippi_save.txt"):
+                      os.remove("kippi_save.txt")
+                    else:
+                      pass
+                    continue_game = False
+                elif game_over == 'no':
+                    game_start = False
+                    intro_screen = True
+                    if os.path.exists("kippi_save.txt"):
+                      os.remove("kippi_save.txt")
+                    else:
+                      pass
 
             def wizard_emotes(mood):
                 if mood == 'excited':
@@ -974,6 +1037,47 @@ while game_state == True:
                         fact += 1
                     if dialogue_choice == '2':
                         fact = 11
+
+            def player_attacks(kippi_attack,enemy_defense):
+                print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
+                if enemy_defense >= kippi_attack :
+                    print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ]\n")
+                else:
+                    enemy_stats[1] -= (kippi_attack - enemy_defense)
+                    if enemy_stats[1] <= 0:
+                        print(f"[ {enemy_stats[0]} fainted! ]")
+                    else:
+                        print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]} HP! ]\n")
+
+            def enemy_attacks(kippi_defense,enemy_attack):
+                print(f"[ The {enemy_stats[0]} attacks {player_name}! ]")
+                if kippi_defense <= enemy_attack :
+                    kippi_stats[3] -= (enemy_attack - kippi_defense)
+                    if kippi_stats[3] <= 0:
+                        print(f"[ {player_name} fainted! ]")
+                    else:
+                        print(f"[ {player_name}'s health is down to {kippi_stats[3]} HP! ] \n")
+                else:
+                    print(f"[ ...but {player_name} didn't budge at all! ]\n")
+
+            def speed_check(kippi_speed,enemy_speed):
+                random_chance = random.randint(1, 3)
+                #kippi is faster than enemy
+                if kippi_speed >= enemy_speed :
+                    if random_chance == 1:
+                        print(f"[ {player_name} manages to react first! ]\n")
+                    elif random_chance == 2:
+                        print(f"[ {player_name} gets the upper hand! ]\n")
+                    else:
+                        print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]\n")
+                #enemy is faster than kippi
+                if kippi_speed < enemy_speed :
+                    if random_chance == 1:
+                        print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]\n")
+                    elif random_chance == 2:
+                        print(f"[ {player_name} was blindsided by the enemy's swiftness! ]\n")
+                    else:
+                        print(f"[ {player_name} could not keep up with the enemy's actions in time! ]\n")
                     
             #skunk encounter
             def skunk_encounter():
@@ -982,41 +1086,9 @@ while game_state == True:
                 poisoned_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(skunk_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than skunk
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]\n")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]\n")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]\n")
-                    #skunk is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]\n")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]\n")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]\n")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than skunk
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -1040,7 +1112,7 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
@@ -1049,7 +1121,7 @@ while game_state == True:
                         if battle_input == 'fight':
                             if poisoned_check == True:
                                 kippi_poisoned()
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -1080,7 +1152,7 @@ while game_state == True:
                                     if kippi_stats[3] <= 0:
                                         break
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
                     #skunk is faster than kippi
@@ -1116,7 +1188,7 @@ while game_state == True:
                                 if kippi_stats[3] <= 0:
                                     break
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -1144,7 +1216,7 @@ while game_state == True:
                         if battle_input == 'fight':
                             if poisoned_check == True:
                                 kippi_poisoned()
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -1163,41 +1235,9 @@ while game_state == True:
                 stall_check = 0
                 skip_turn = False
                 while battle_mode == True and kippi_stats[3] > 0:
-                    enemy_stats = list(monkey_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than monkey
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]\n")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]\n")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]\n")
-                    #monkey is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]\n")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]\n")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]\n")
+                    global enemy_stats
+                    enemy_stats = list(monkey_stats.values())                    
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than monkey
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False:
@@ -1222,14 +1262,14 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -1261,11 +1301,11 @@ while game_state == True:
                                             signature_move_trigger = False
                                             skip_turn = True     
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                             if kippi_stats[3] <= 0:
                                 break
@@ -1301,7 +1341,7 @@ while game_state == True:
                                 skip_turn = True
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         if skip_turn == False:
@@ -1328,7 +1368,7 @@ while game_state == True:
                                 print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -1351,41 +1391,9 @@ while game_state == True:
                 stall_check = 0
                 skip_turn = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(raven_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than raven
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]\n")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]\n")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]\n")
-                    #raven is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]\n")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]\n")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]\n")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than raven
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False:
@@ -1410,14 +1418,14 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -1425,7 +1433,7 @@ while game_state == True:
                                     print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
                                     random_chance = random.randint(1, 3)
                                     if random_chance == 1:
-                                        item_drop_common(1)
+                                        item_drop_common(2)
                                     elif random_chance == 2:
                                         item_drop_uncommon(50)
                                     else:
@@ -1449,11 +1457,11 @@ while game_state == True:
                                             signature_move_trigger = False
                                             skip_turn = True     
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                             if kippi_stats[3] <= 0:
                                 break
@@ -1487,7 +1495,7 @@ while game_state == True:
                                 skip_turn = True
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         if skip_turn == False:
@@ -1514,14 +1522,14 @@ while game_state == True:
                                 print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
                                 random_chance = random.randint(1, 3)
                                 if random_chance == 1:
-                                    item_drop_common(1)
+                                    item_drop_common(2)
                                 elif random_chance == 2:
                                     item_drop_uncommon(50)
                                 else:
                                     item_drop_rare(100)
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -1541,41 +1549,9 @@ while game_state == True:
                 paralyzed = False
                 paralyzed_check = False
                 while battle_mode == True and kippi_stats[3] > 0:
-                    enemy_stats = list(rhino_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than rhino
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #rhino is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    global enemy_stats
+                    enemy_stats = list(rhino_stats.values())                    
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than rhino
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if paralyzed == False:
@@ -1600,7 +1576,7 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
@@ -1608,7 +1584,7 @@ while game_state == True:
                                 if paralyzed_check == True:
                                     paralyzed_trigger = random.randint(1,2)
                                     if paralyzed_trigger == 1 :
-                                        player_attacks()
+                                        player_attacks(kippi_stats[4],enemy_stats[3])
                                         if enemy_stats[1] <= 0:
                                             print(f"[ {enemy_stats[0]} fainted! ]")
                                             print(f"[ {player_name} wins! ]\n")
@@ -1618,7 +1594,7 @@ while game_state == True:
                                     else:
                                             print(f"[ {player_name} is PARALYZED! The static in their body makes them unable to move a single inch! ]")
                                 else:
-                                    player_attacks()
+                                    player_attacks(kippi_stats[4],enemy_stats[3])
                                     if enemy_stats[1] <= 0:
                                         print(f"[ {enemy_stats[0]} fainted! ]")
                                         print(f"[ {player_name} wins! ]\n")
@@ -1643,7 +1619,7 @@ while game_state == True:
                                         print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                         signature_move_trigger = False
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if def_up_check == True :
                                         turn_count += 1
                                         if turn_count == 3:
@@ -1672,7 +1648,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 3:
@@ -1705,7 +1681,7 @@ while game_state == True:
                                     if paralyzed_check == True:
                                         paralyzed_trigger = random.randint(1,2)
                                         if paralyzed_trigger == 1 :
-                                            player_attacks()
+                                            player_attacks(kippi_stats[4],enemy_stats[3])
                                             if enemy_stats[1] <= 0:
                                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                                 print(f"[ {player_name} wins! ]\n")
@@ -1714,7 +1690,7 @@ while game_state == True:
                                         else:
                                             print(f"[ {player_name} is PARALYZED! The static in their body makes them unable to move a single inch! ]")
                                     else:
-                                        player_attacks()
+                                        player_attacks(kippi_stats[4],enemy_stats[3])
                                         if enemy_stats[1] <= 0:
                                             print(f"[ {enemy_stats[0]} fainted! ]")
                                             print(f"[ {player_name} wins! ]\n")
@@ -1730,41 +1706,9 @@ while game_state == True:
                 stall_check = 0
                 skip_turn = False
                 while battle_mode == True and kippi_stats[3] > 0:
-                    enemy_stats = list(penguin_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than penguin
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #penguin is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    global enemy_stats
+                    enemy_stats = list(penguin_stats.values())                    
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than penguin
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False:
@@ -1789,14 +1733,14 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -1824,11 +1768,11 @@ while game_state == True:
                                         signature_move_trigger = False
                                         skip_turn = True
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                             if kippi_stats[3] <= 0:
                                 break
@@ -1868,7 +1812,7 @@ while game_state == True:
                                 if kippi_stats[3] <= 0:
                                     break
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         if skip_turn == False:
@@ -1895,7 +1839,7 @@ while game_state == True:
                                 print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -1914,41 +1858,9 @@ while game_state == True:
                 def_up_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
-                    enemy_stats = list(seal_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                            
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than seal
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #seal is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    global enemy_stats
+                    enemy_stats = list(seal_stats.values())                            
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than seal
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -1972,14 +1884,14 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
                             print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -2007,7 +1919,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 3:
@@ -2018,6 +1930,16 @@ while game_state == True:
                                     break
                     #seal is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"      ^----^\n     (  {face} )\n     |     ||     〵\n  _  | |   ||        o___C.\n  ||_!_|   |!    -   〵 ó=〵\n   ---|  T |           `-  〵_____\n      |  | |            |         〵\n      !__!_!          ./ /L._____, 〵\n                      '-'       /__/")
                         if signature_move_trigger == True:
                                 seal_moves = ['ABYSSAL BARK', "SHIELD O' GLACIERS"]
                                 signature_move = random.choice(seal_moves)
@@ -2038,7 +1960,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if def_up_check == True :
                                 def_counter += 1
                                 if def_counter == 3:
@@ -2070,7 +1992,7 @@ while game_state == True:
                             print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -2087,41 +2009,9 @@ while game_state == True:
                 stall_check = 0
                 frozen_check = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(wolf_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than wolf
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #wolf is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than wolf
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if frozen_check == False:
@@ -2146,14 +2036,14 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -2177,13 +2067,13 @@ while game_state == True:
                                         print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ]\n")
                                         signature_move_trigger = False
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
                         if frozen_check == True:
                             for i in range(2):
                                 print(f"[ {player_name} is still shivering! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                         break
                             frozen_check = False
@@ -2217,7 +2107,7 @@ while game_state == True:
                                     print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ]\n")
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         if frozen_check == False:
@@ -2244,7 +2134,7 @@ while game_state == True:
                                 print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -2254,8 +2144,9 @@ while game_state == True:
                                     break
                         if frozen_check == True:
                             for i in range(2):
+                                print(f'''                   〵      ,\n                        ,,/( ,,,,,,,,,,___,,\n                  -     )       ,,,         "`,_,\n      ^----^          /( D   /                   `,\n     (U'>,< )        L/7_/〵,|         /        〵\n     |     ||         ,`      `,  〵    ,|          〵\n  _  | |   ||          ,      /  /``````||      |〵, 〵__,)))\n  ||_!_|   |!                /  / |      〵〵   〵 〵,,,,,,/\n   ---|  T |                |  /  |       〵〵  )/\n      |  | |                〵 (|  )     ,,//   /\n      !__!_!                  `_)_/     ((___/"''')
                                 print(f"[ {player_name} is still shivering! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                         break
                             frozen_check = False
@@ -2270,41 +2161,24 @@ while game_state == True:
                 skip_turn = False
                 frozen_check = False
                 while battle_mode == True and kippi_stats[3] > 0:
-                    enemy_stats = list(bear_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
+                    global enemy_stats
                     random_chance = random.randint(1, 3)
                     #kippi is faster than bear
                     if kippi_stats[6] >= enemy_stats[4] :
                         if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
+                            print(f"[ {player_name} manages to react first! ]\n")
                         elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
+                            print(f"[ {player_name} gets the upper hand! ]\n")
                         else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
+                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]\n")
                     #bear is faster than kippi
                     if kippi_stats[6] < enemy_stats[4] :
                         if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
+                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]\n")
                         elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
+                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]\n")
                         else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]\n")
                     #kippi is faster than bear
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False or frozen_check == False:
@@ -2329,14 +2203,14 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -2366,17 +2240,17 @@ while game_state == True:
                                             if kippi_stats[3] <= 0:
                                                 break
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                         if frozen_check == True:
                             for i in range(2):
                                 print(f'''                               _\n                              (〵〵 _                      ___\n                     〵      .-"`"(〵〵               _.""`   `"-.\n                            /      ` `-._        _.-"            `〵__\n                           a   a)        `-.__.-'                    `",\n                   _      /                                         `;-`\n                         /     .^                                    |\n                        ()    /  /`                                  |\n                         `---`"~``〵                                 |\n      ^----^                       〵                                |\n     (U'>.< )                       〵          〵      /           /\n     |     ||                       /`,   ,      |     |           /\n  _  | |   ||                      /   "-.|      |     |         /'\n  ||_!_|   |!                     /     / |      /,__  |       /`〵\n   ---|  T |                     /    /'  |     /    `"'〵    (   〵\n      |  | |                  __/   /'    |    |        `〵    〵  〵\n      !__!_!                 (_(___/      |   |           `〵   〵__〵\n                                          /   〵           (_(___|\n                                         /     )\n                                        (_(_(__)''')
                                 print(f"[ {player_name} is still shivering! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                         break
                             frozen_check = False
@@ -2413,7 +2287,7 @@ while game_state == True:
                                     signature_move_trigger = False
                                     frozen_check = True
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         if skip_turn == False and frozen_check == False:
@@ -2440,7 +2314,7 @@ while game_state == True:
                                 print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -2454,7 +2328,7 @@ while game_state == True:
                             for i in range(2):
                                 print(f'''                               _\n                              (〵〵 _                      ___\n                     〵      .-"`"(〵〵               _.""`   `"-.\n                            /      ` `-._        _.-"            `〵__\n                           a   a)        `-.__.-'                    `",\n                   _      /                                         `;-`\n                         /     .^                                    |\n                        ()    /  /`                                  |\n                         `---`"~``〵                                 |\n      ^----^                       〵                                |\n     (  {face} )                       〵          〵      /           /\n     |     ||                       /`,   ,      |     |           /\n  _  | |   ||                      /   "-.|      |     |         /'\n  ||_!_|   |!                     /     / |      /,__  |       /`〵\n   ---|  T |                     /    /'  |     /    `"'〵    (   〵\n      |  | |                  __/   /'    |    |        `〵    〵  〵\n      !__!_!                 (_(___/      |   |           `〵   〵__〵\n                                          /   〵           (_(___|\n                                         /     )\n                                        (_(_(__)''')
                                 print(f"[ {player_name} is still shivering! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                         break
                             frozen_check = False
@@ -2468,41 +2342,9 @@ while game_state == True:
                 def_up_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(snowman_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than snowman
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #snowman is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than snowman
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -2526,14 +2368,14 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
                             print(" * `       *   `   *   `   *   *     *\n         `                  `         ` \n  `   *       *     *     `     *      `\n `     `        `      `      `    `\n   *     *          *      `    `     *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  =.= )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -2567,7 +2409,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]\n")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 3:
@@ -2579,6 +2421,16 @@ while game_state == True:
                     #snowman is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
                         if signature_move_trigger == True:
+                            face = random.randint(1,4)
+                            if face == 1:
+                                face = '•w•'
+                            elif face == 2:
+                                face = '•u•'
+                            elif face == 3:
+                                face = '^W^'
+                            else:
+                                face = '^u^'
+                            print(f'''                    〵         ,===.\n                   _          _|___|_\n                       __/    ".ò ó."     /__\n                        /`.   ; ._. ;   ,'〵\n      ^----^               `. .'=*=`. .'\n     (  {face} )                Y   *   Y\n     |     ||                 (  *  )\n  _  | |   ||                 .`---'.\n  ||_!_|   |!               .`   *   '.\n   ---|  T |                |    *    |\n      |  | |                (    *    )\n      !__!_!                 `._____.`''')
                             snowman_moves = ["BLAST O' SNOWBALLS", 'CRYSTALLIZE']
                             signature_move = random.choice(snowman_moves)
                             if signature_move == snowman_moves[0]:
@@ -2598,7 +2450,7 @@ while game_state == True:
                                 print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]\n")
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if def_up_check == True :
                                 def_counter += 1
                                 if def_counter == 3:
@@ -2630,7 +2482,7 @@ while game_state == True:
                             print(" * `       *   `   *   `   *   *     *\n         `                  `         ` \n  `   *       *     *     `     *      `\n `     `        `      `      `    `\n   *     *          *      `    `     *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  =.= )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -2654,41 +2506,9 @@ while game_state == True:
                 stall_check = 0
                 hysteria_check = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(spirit_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than spirit
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #spirit is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than spirit
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -2712,12 +2532,12 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if hysteria_check == True:
                                 kippi_stats[3] -= 3
                                 print(f"[ The voices in {player_name}'s head is slowly draining them of their sanity! ]")
@@ -2755,7 +2575,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]\n")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 5:
@@ -2766,6 +2586,16 @@ while game_state == True:
                                     break
                     #spirit is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f'''                                          |\n                                       .*`|'*,\n                                      --- * ---\n                                       '*,|.*`\n                                          |\n\n                               .-"~.    ,;;;,    ,~"-.\n                              (     )  (  )( )  (     )\n                             ('      )();o,o*()(      `)\n                            (        ( ); v ;( )        )\n                            ('     ,( (;-`-'-;( ),     `)\n                             `(   (  )  ,   ,  (  )   )'\n                              `(     : :_,|._; :     )'\n                              ('     `---'*`---':    `)\n                              ('    /  /  |  〵 〵    `)\n      ^----^                 (     /  /   "   〵 〵     )\n     (  {face} )                `-..-'  //;      |〵 `-..-'\n     |     ||                        ))        ))\n  _  | |   ||                       (/         〵〵\n  ||_!_|   |!                       (*;~*:~*;~*;~*)\n   ---|  T |                       ('';〵' ``) ''〵'\n      |  | |\n      !__!_!''')
                         if signature_move_trigger == True:
                                 spirit_moves = ['TEMPEST VEIL', 'WHISPERS OF HYSTERIA', 'PERMAFROST ARMOUR']
                                 signature_move = random.choice(spirit_moves)
@@ -2793,7 +2623,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]\n")
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if def_up_check == True :
                                 def_counter += 1
                                 if def_counter == 5:
@@ -2823,7 +2653,7 @@ while game_state == True:
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if hysteria_check == True:
                                 kippi_stats[3] -= 3
                                 print(f"[ The voices in {player_name}'s head is slowly draining them of their sanity! ]")
@@ -2844,41 +2674,9 @@ while game_state == True:
                 stall_check = 0
                 frozen_check = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(bigfoot_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than bigfoot
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #bigfoot is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than bigfoot
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if frozen_check == False:
@@ -2903,12 +2701,12 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -2939,17 +2737,29 @@ while game_state == True:
                                         print(f"[ {enemy_stats[0]}'s attack was boosted to {enemy_stats[4]}! ] \n")
                                         signature_move_trigger = False
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                    if kippi_stats[3] <= 0:
+                                        break
                         if frozen_check == True:
                             for i in range(2):
                                 print(f"                                        /#####〵\n                                  〵     ____\n                                 _     /    〵#|\n                                      /_  __/##|_\n                                   __(_((___ /#/  )_____\n                                  /##|o^ o__/#/  /######〵\n                                 |##|____   |_  /〵######|\n                                /〵#/ /  〵 /  |/  〵####/\n                               |####(_(___/ ___/####〵#/〵\n                              〵####|  |       |######|##|\n      ^----^                   /(##〵c_〵   c_/|######/##/\n     (U'>.< )                  |##### (_(___   ' 〵######)〵\n     |     ||             ____|_#####( ( ______ #|#######/\n  _  | |   ||           ( ( ( ( 〵###_  / ) ) ) )|#####/\n  ||_!_|   |!           /       /(〵/ )〵      〵|###/____\n   ---|  T |           (       (/  /〵〵)       )         〵\n      |  | |           〵         // 〵         /_/〵_〵_〵_〵\n      !__!_!            〵_______//   〵_______/")
                                 print(f"[ {player_name} is still shivering! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
                             frozen_check = False          
                     #bigfoot is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                                        /#####〵\n                                  〵     ____\n                                 _     /    〵#|\n                                      /_  __/##|_\n                                   __(_((___ /#/  )_____\n                                  /##|o^ o__/#/  /######〵\n                                 |##|____   |_  /〵######|\n                                /〵#/ /  〵 /  |/  〵####/\n                               |####(_(___/ ___/####〵#/〵\n                              〵####|  |       |######|##|\n      ^----^                   /(##〵c_〵   c_/|######/##/\n     (  {face} )                  |##### (_(___   ' 〵######)〵\n     |     ||             ____|_#####( ( ______ #|#######/\n  _  | |   ||           ( ( ( ( 〵###_  / ) ) ) )|#####/\n  ||_!_|   |!           /       /(〵/ )〵      〵|###/____\n   ---|  T |           (       (/  /〵〵)       )         〵\n      |  | |           〵         // 〵         /_/〵_〵_〵_〵\n      !__!_!            〵_______//   〵_______/")
                         if signature_move_trigger == True:
                             bigfoot_moves = ['ICICLE SPEAR', 'ICE-COLD GRASP', 'FRIGID FURY']
                             signature_move = random.choice(bigfoot_moves)
@@ -2974,7 +2784,9 @@ while game_state == True:
                                 print(f"[ {enemy_stats[0]}'s attack was boosted to {enemy_stats[4]}! ]\n")
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
+                            if kippi_stats[3] <= 0:
+                                break
                         if frozen_check == False:
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                             face = random.randint(1,4)
@@ -2997,7 +2809,7 @@ while game_state == True:
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -3008,9 +2820,9 @@ while game_state == True:
                             for i in range(2):
                                 print(f"                                        /#####〵\n                                  〵     ____\n                                 _     /    〵#|\n                                      /_  __/##|_\n                                   __(_((___ /#/  )_____\n                                  /##|o^ o__/#/  /######〵\n                                 |##|____   |_  /〵######|\n                                /〵#/ /  〵 /  |/  〵####/\n                               |####(_(___/ ___/####〵#/〵\n                              〵####|  |       |######|##|\n      ^----^                   /(##〵c_〵   c_/|######/##/\n     (U'>.< )                  |##### (_(___   ' 〵######)〵\n     |     ||             ____|_#####( ( ______ #|#######/\n  _  | |   ||           ( ( ( ( 〵###_  / ) ) ) )|#####/\n  ||_!_|   |!           /       /(〵/ )〵      〵|###/____\n   ---|  T |           (       (/  /〵〵)       )         〵\n      |  | |           〵         // 〵         /_/〵_〵_〵_〵\n      !__!_!            〵_______//   〵_______/")
                                 print(f"[ {player_name} is still shivering! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
-                                        break
+                                    break
                             frozen_check = False
                     break
 
@@ -3021,41 +2833,9 @@ while game_state == True:
                 hp_up_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(lizard_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than lizard
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #lizard is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than lizard
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -3079,19 +2859,20 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
                             print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
                                 kippi_stats[1] += enemy_stats[5]
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                item_drop_uncommon(20)
                                 break
                             if signature_move_trigger == True:
                                 lizard_moves = ['REGENERATE', 'WHISKING TAIL WHIP']
@@ -3106,7 +2887,7 @@ while game_state == True:
                                     print(f"[ {player_name}'s speed has reduced to {kippi_stats[6]}! ] \n")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if hp_up_check == True:
                                     if enemy_stats[1] < 25:
                                         print(f"[ {enemy_stats[0]} decided to use {lizard_moves[0]}! ]")
@@ -3114,8 +2895,20 @@ while game_state == True:
                                         enemy_stats[1] += 25
                                         print(f"[ {enemy_stats[0]}'s health went up to {enemy_stats[1]}! ] \n")
                                         hp_up_check = False
+                                if kippi_stats[3] <= 0:
+                                    break
                     #lizard is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                                        /#####〵\n                                  〵     ____\n                                 _     /    〵#|\n                                      /_  __/##|_\n                                   __(_((___ /#/  )_____\n                                  /##|o^ o__/#/  /######〵\n                                 |##|____   |_  /〵######|\n                                /〵#/ /  〵 /  |/  〵####/\n                               |####(_(___/ ___/####〵#/〵\n                              〵####|  |       |######|##|\n      ^----^                   /(##〵c_〵   c_/|######/##/\n     (  {face} )                  |##### (_(___   ' 〵######)〵\n     |     ||             ____|_#####( ( ______ #|#######/\n  _  | |   ||           ( ( ( ( 〵###_  / ) ) ) )|#####/\n  ||_!_|   |!           /       /(〵/ )〵      〵|###/____\n   ---|  T |           (       (/  /〵〵)       )         〵\n      |  | |           〵         // 〵         /_/〵_〵_〵_〵\n      !__!_!            〵_______//   〵_______/")
                         if signature_move_trigger == True:
                                 lizard_moves = ['REGENERATE', 'WHISKING TAIL WHIP']
                                 signature_move = random.choice(lizard_moves)
@@ -3129,7 +2922,7 @@ while game_state == True:
                                     print(f"[ {player_name}'s speed has reduced to {kippi_stats[6]}! ] \n")
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if hp_up_check == True:
                                 if enemy_stats[1] < 25:
                                     print(f"[ {enemy_stats[0]} decided to use {lizard_moves[0]}! ]")
@@ -3137,6 +2930,8 @@ while game_state == True:
                                     enemy_stats[1] += 25
                                     print(f"[ {enemy_stats[0]}'s health went up to {enemy_stats[1]}! ] \n")
                                     hp_up_check = False
+                            if kippi_stats[3] <= 0:
+                                break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -3160,12 +2955,13 @@ while game_state == True:
                             print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
                                 kippi_stats[1] += enemy_stats[5]
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                item_drop_uncommon(20)
                                 break
                     break
 
@@ -3177,41 +2973,9 @@ while game_state == True:
                 stall_check = 0
                 skip_turn = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(snake_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than snake
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #snake is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than snake
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False:
@@ -3236,14 +3000,14 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if poisoned_check == True:
                                     kippi_poisoned()
                                 if enemy_stats[1] <= 0:
@@ -3251,6 +3015,7 @@ while game_state == True:
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                    item_drop_uncommon(20)
                                     if poisoned_check == True:
                                         print(f"[ {player_name} doesn't feel ill anymore. Hooray! ]\n")
                                     break
@@ -3271,12 +3036,24 @@ while game_state == True:
                                         signature_move_trigger = False
                                         skip_turn = True
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                    if kippi_stats[3] <= 0:
+                                        break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                     #snake is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                   〵\n      ^----^      _   __\n     (  {face} )        (òó)\n     |     ||        〵_/\n  _  | |   ||        / ^\n  ||_!_|   |!       ( (\n   ---|  T |        〵〵____\n      |  | |        (_______)\n      !__!_!       (_________()Oo")
                         if signature_move_trigger == True:
                             snake_moves = ['VENOMOUS BITE', 'COIL & CONSTRICT']
                             signature_move = random.choice(snake_moves)
@@ -3294,7 +3071,9 @@ while game_state == True:
                                 skip_turn = True
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
+                            if kippi_stats[3] <= 0:
+                                break
                         if skip_turn == False:
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                             face = random.randint(1,4)
@@ -3319,7 +3098,7 @@ while game_state == True:
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if poisoned_check == True:
                                     kippi_poisoned()
                                 if enemy_stats[1] <= 0:
@@ -3327,6 +3106,7 @@ while game_state == True:
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                    item_drop_uncommon(20)
                                     if poisoned_check == True:
                                         print(f"[ {player_name} doesn't feel ill anymore. Hooray! ]\n")
                                     break
@@ -3340,41 +3120,9 @@ while game_state == True:
                 signature_move_trigger = True
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(ostrich_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than ostrich
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #ostrich is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than ostrich
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -3398,19 +3146,20 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
                             print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
                                 kippi_stats[1] += enemy_stats[5]
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                item_drop_uncommon(20)
                                 break
                             if signature_move_trigger == True:
                                 ostrich_moves = ['PEBBLY PUNT', 'KICK OF HERCULES']
@@ -3431,9 +3180,21 @@ while game_state == True:
                                         print(f"[ ...but {player_name} didn't budge at all! ] \n")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                if kippi_stats[3] <= 0:
+                                    break
                     #ostrich is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                            〵\n                           _    __\n                               (òó)\n                               (/|\n                                ||\n                                ||\n                                ||,-v-,_\n                                ||〵|   /\n                            _,'=  ='-,-<\n                           / :       /  〵\n                          ( :       (   /,\n                          〵_;       〵__)\n      ^----^                 〵,_ ,   |\n     (  {face} )                 |  / 〵 |\n     |     ||                 | /   〵|\n  _  | |   ||                 ()     ()\n  ||_!_|   |!                 //     ||\n   ---|  T |                 //      ||\n      |  | |                //       ||\n      !__!_!              ,//        /〵\n                          ^^         '^^")
                         if signature_move_trigger == True:
                                 ostrich_moves = ['PEBBLY PUNT', 'KICK OF HERCULES']
                                 signature_move = random.choice(ostrich_moves)
@@ -3453,7 +3214,9 @@ while game_state == True:
                                         print(f"[ ...but {player_name} didn't budge at all! ] \n")
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
+                            if kippi_stats[3] <= 0:
+                                break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -3477,12 +3240,13 @@ while game_state == True:
                             print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
                                 kippi_stats[1] += enemy_stats[5]
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                item_drop_uncommon(20)
                                 break
                     break
 
@@ -3493,41 +3257,9 @@ while game_state == True:
                 stall_check = 0
                 skip_turn = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(coyote_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than coyote
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #coyote is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than coyote
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False:
@@ -3552,19 +3284,20 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                    item_drop_uncommon(20)
                                     break
                                 if signature_move_trigger == True:
                                     coyote_moves = ['FRENZIED FERAL LACERATIONS', 'EVASIVE SWERVE']
@@ -3586,9 +3319,11 @@ while game_state == True:
                                         signature_move_trigger = False
                                         skip_turn = True     
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                    if kippi_stats[3] <= 0:
+                                        break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                     #coyote is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
@@ -3622,7 +3357,9 @@ while game_state == True:
                                 skip_turn = True
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
+                            if kippi_stats[3] <= 0:
+                                break
                         if skip_turn == False:
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                             face = random.randint(1,4)
@@ -3647,12 +3384,13 @@ while game_state == True:
                                 print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                    item_drop_uncommon(20)
                                     break
                         else:
                             skip_turn = False
@@ -3666,41 +3404,10 @@ while game_state == True:
                 paralyzed_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(tortoise_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
                     random_chance = random.randint(1, 3)
-                    #kippi is faster than tortoise
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #tortoise is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than tortoise
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -3724,7 +3431,7 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
@@ -3734,22 +3441,32 @@ while game_state == True:
                             if paralyzed_check == True:
                                 paralyzed_trigger = random.randint(1,2)
                                 if paralyzed_trigger == 1 :
-                                    player_attacks()
+                                    player_attacks(kippi_stats[4],enemy_stats[3])
                                     if enemy_stats[1] <= 0:
                                         print(f"[ {enemy_stats[0]} fainted! ]")
                                         print(f"[ {player_name} wins! ]\n")
                                         kippi_stats[1] += enemy_stats[5]
                                         print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                        random_chance = random.randint(1, 2)
+                                        if random_chance == 1:
+                                            item_drop_uncommon(20)
+                                        else:
+                                            item_drop_rare(100)
                                         break
                                 else:
                                     print(f"[ {player_name} is PARALYZED! The static in their body makes them unable to move a single inch! ]")
                             else:
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                    random_chance = random.randint(1, 2)
+                                    if random_chance == 1:
+                                        item_drop_uncommon(20)
+                                    else:
+                                        item_drop_rare(100)
                                     break
                             if signature_move_trigger == True:
                                 tortoise_moves = ['QUAKING STOMP', 'LIE DOGGO']
@@ -3770,15 +3487,27 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 3:
                                         enemy_stats[3] -= 50
                                         print(f"[ The {enemy_stats[0]} popped out from its shell! ]")
                                         print(f"[ {enemy_stats[0]}'s defence has went back down to to {enemy_stats[3]}! ]")
+                                if kippi_stats[3] <= 0:
+                                    break
                     #tortoise is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"      ^----^\n     (  {face} )       〵\n     |     ||      _    _..---.--.\n  _  | |   ||         .'〵__|/ò.__)\n  ||_!_|   |!        /__.' _/ .-'〵\n   ---|  T |        (____.'.-_〵___)\n      |  | |         (_/ _)__(_〵_)〵_\n      !__!_!          (_..)--(.._)'--'")
                         if signature_move_trigger == True:
                             tortoise_moves = ['QUAKING STOMP', 'LIE DOGGO']
                             signature_move = random.choice(tortoise_moves)
@@ -3798,13 +3527,15 @@ while game_state == True:
                                 print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if def_up_check == True :
                                 def_counter += 1
                                 if def_counter == 3:
                                     enemy_stats[3] -= 50
                                     print(f"[ The {enemy_stats[0]} popped out from its shell! ]")
                                     print(f"[ {enemy_stats[0]}'s defence has went back down to to {enemy_stats[3]}! ]")
+                            if kippi_stats[3] <= 0:
+                                break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -3831,22 +3562,32 @@ while game_state == True:
                             if paralyzed_check == True:
                                 paralyzed_trigger = random.randint(1,2)
                                 if paralyzed_trigger == 1 :
-                                    player_attacks()
+                                    player_attacks(kippi_stats[4],enemy_stats[3])
                                     if enemy_stats[1] <= 0:
                                         print(f"[ {enemy_stats[0]} fainted! ]")
                                         print(f"[ {player_name} wins! ]\n")
                                         kippi_stats[1] += enemy_stats[5]
                                         print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                        random_chance = random.randint(1, 2)
+                                        if random_chance == 1:
+                                            item_drop_uncommon(20)
+                                        else:
+                                            item_drop_rare(100)
                                         break
                                 else:
                                     print(f"[ {player_name} is PARALYZED! The static in their body makes them unable to move a single inch! ]")
                             else:
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                                    random_chance = random.randint(1, 2)
+                                    if random_chance == 1:
+                                        item_drop_uncommon(20)
+                                    else:
+                                        item_drop_rare(100)
                                     break
                     break
 
@@ -3857,41 +3598,10 @@ while game_state == True:
                 def_up_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
-                    enemy_stats = list(armadillo_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
+                    global enemy_stats
+                    enemy_stats = list(armadillo_stats.values())                    
                     random_chance = random.randint(1, 3)
-                    #kippi is faster than armadillo
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #armadillo is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than armadillo
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -3961,15 +3671,27 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 3:
                                         enemy_stats[3] -= 40
                                         print(f"[ The {enemy_stats[0]} de-balled! ]")
                                         print(f"[ {enemy_stats[0]}'s defence has went back down to to {enemy_stats[3]}! ]")
+                                if kippi_stats[3] <= 0:
+                                    break
                     #armadillo is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                                                                  @@%#@#+@%#@@@@@@                           \n                                                               @-+--=--+--*--+--+==-@                        \n                                                            @@=---*+*+==*--+--+--*-+==*%@                    \n                                                         @@--====+*++#==++-#=-*=-*-+-=-+--#@                 \n                                       %-#@            @#:-======*=*++#+=%=+=-#=-*=+-=+=++--*@               \n                                       @==-@         @=:-========*=#++#+=#==++#++#+==-#-#-=--:%              \n                                   @++@@+==-#@     #::-==========+=*++#+=++-#=*+-*+=*+%=%-#=---=%            \n                             〵      @=-%*==-#%%=----===========--++*+%++*#=%-*==#*+*+*=#-==----:+@          \n                                      @=--+#==%---===========-----+=*=**==%-#-*=-*++*=#=#===-------+@        \n                           _           @@@@#=-#*============------*-*=+*=-%-%+#==#==*=#=#=+=--------=@       \n                                        @=-----#==========--------*-*+++==#=*-*--#-=+=*+%-#----------=@      \n                                      %=#%@*---#========----------*-*=+===+=+-+=+*=*-+--*-=-----------#@     \n                                    @+=-+*:-*-=#======----===-----*-*=*======---*=-*-#=*-*-------------@     \n                                   @+=-*#-@#%-=#------=+==++==*-+++-*-+=-+-*--=-*=*=+-=%-=-===---------@     \n                                   %=-==-##+---*---==+*=+=+=+*+++++-+-+--+-+-=--==*-*=+-*=+=++====----*+@    \n                                  @--------**=-=#=--=====++++#+=-=+--::::-:-::-+:+-+-+=++++*+**+++*=-#+-*@   \n                                  %:::-=----+==+%@@@#*=:::====-+*=::=:::::::::-:::==+:=--**++#*+===##==+=%   \n                                  %::-+:--=*+@@        @#@@#=---+@#====+@ @%%%-=-::::::==--+===-@@ %=+---:#  \n      ^----^                     @+==-:-=+%@            @#+=+@ @+++==+%   ^----^=**+:::::--*%@@     @==+--:# \n     (  {face} )                    @+-:::==%               +===*  @+=+==*  ( ò-ó  )=+*=====+@           @+==+-* \n     |     ||                  #:::::-#@               @#==*   @*++==#   ||     |@@+===+@             @+-+=*#\n  _  | |   ||                                         #=-+-@   *====*  #*||   | | @_+++@               @=-=-#\n  ||_!_|   |!                                      @#*=-*++   @=--=%@+=+=!|   |_!_||--@                 =-=-*\n   ---|  T |                                     @@#=@ @@   @*-#--%    @==| T  |---=#=@               @*-=+=@\n      |  | |                                             @--*+-+:@        | |  |=*:+%=             @@:+--##@ \n      !__!_!                                             %@#+*#*          !_!__!#%           @@*-==+=+%@    \n                                                                                         @#*-==+*##          \n                                                                                  %**+##%##@@")
                         if signature_move_trigger == True:
                                 armadillo_moves = ['ROLL OVER', "CALL UPON THE SUN'S WRATH", 'VOLVATION']
                                 signature_move = random.choice(armadillo_moves)
@@ -4002,13 +3724,15 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s defence has increased to {enemy_stats[3]}! ]")
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if def_up_check == True :
                                     def_counter += 1
                                     if def_counter == 3:
                                         enemy_stats[3] -= 40
                                         print(f"[ The {enemy_stats[0]} de-balled! ]")
                                         print(f"[ {enemy_stats[0]}'s defence has went back down to to {enemy_stats[3]}! ]")
+                            if kippi_stats[3] <= 0:
+                                break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -4048,41 +3772,9 @@ while game_state == True:
                 hp_up_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(cactus_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than cactus
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #cactus is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than cactus
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -4106,12 +3798,12 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -4140,7 +3832,7 @@ while game_state == True:
                                     hp_up_check = True
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if hp_up_check == True:
                                     if enemy_stats[1] < 25:
                                         print(f"[ {enemy_stats[0]} decided to use {cactus_moves[2]}! ]")
@@ -4148,8 +3840,20 @@ while game_state == True:
                                         enemy_stats[1] += 50
                                         print(f"[ {enemy_stats[0]}'s health went up to {enemy_stats[1]}! ] \n")
                                         hp_up_check = False
+                                if kippi_stats[3] <= 0:
+                                    break
                     #cactus is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                                  _   _\n                                 / '-' 〵\n                                ;       ;\n                             /'-|       |-'〵\n                            |   |_______K   |\n                            〵   '-------'  /\n                              .___.....___.'\n                                | ;  : ;|\n                               _|;__;__.|_\n                              |     Y     |    .--\n                     .--      〵__.'^'.__./   /;  〵\n                    /  ;〵      |_  ;  _|     |  ' |\n                    | ;  |     ( `(''')  )    |;   |\n                    |'   |     (  (   )  )`.  | ;  |\n                    |  ; |     (  (   )  )  ) |    |\n                    |;   |      ;`-.__.'|  /  |:  ;|\n                    | ;  |.     |;  ;   |__(__/ ;  |\n                    |   ' L_____'      ' -_   .'   /\n                    〵  '.   - _  ' ;  ;  _  -   .'\n                     '.   -     - ;  ;   .------`\n                       `--------.      ;|    〵\n                                |;  ,   |〵    〵\n                                |     ; |  `````\n                                |. ;    |\n                                | :    :|\n                                |   .   |\n                                |;   ;  |\n                                |;  ,   |\n                                |     ; |\n                                |. ;    |\n                                | :    :|\n                                |   .   |\n                                |;   ;  |\n      ^----^                    |;  ,   |\n     (  {face} )                   |     ; |\n     |     ||                   |     ; |\n  _  | |   ||                   |. ;    |\n  ||_!_|   |!                   | :    :|\n   ---|  T |                    |   .   |\n      |  | |                    |;   ;  |\n      !__!_!                    `'-----'`")
                         if signature_move_trigger == True:
                                 cactus_moves = ["BARRAGE O' THORNS", 'SPILLING SPORES', 'PHOTOSYNTHESIS']
                                 signature_move = random.choice(cactus_moves)
@@ -4172,7 +3876,7 @@ while game_state == True:
                                     hp_up_check = True
                                     signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if hp_up_check == True:
                                 if enemy_stats[1] < 25:
                                     print(f"[ {enemy_stats[0]} decided to use {cactus_moves[2]}! ]")
@@ -4180,6 +3884,8 @@ while game_state == True:
                                     enemy_stats[1] += 50
                                     print(f"[ {enemy_stats[0]}'s health went up to {enemy_stats[1]}! ] \n")
                                     hp_up_check = False
+                            if kippi_stats[3] <= 0:
+                                break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -4201,7 +3907,7 @@ while game_state == True:
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -4217,41 +3923,9 @@ while game_state == True:
                 stall_check = 0
                 skip_turn = False
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(behemoth_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than behemoth
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #behemoth is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than behemoth
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if skip_turn == False:
@@ -4276,12 +3950,12 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -4318,9 +3992,11 @@ while game_state == True:
                                         print(f"[ {player_name}'s speed has reduced to {kippi_stats[6]}! ] \n")
                                         signature_move_trigger = False
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                    if kippi_stats[3] <= 0:
+                                        break
                         if skip_turn == True:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             skip_turn = False
                     #behemoth is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
@@ -4364,7 +4040,9 @@ while game_state == True:
                                 print(f"[ {player_name}'s speed has reduced to {kippi_stats[6]}! ] \n")
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
+                            if kippi_stats[3] <= 0:
+                                break
                         if skip_turn == False:
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                             face = random.randint(1,4)
@@ -4387,7 +4065,7 @@ while game_state == True:
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
@@ -4407,44 +4085,9 @@ while game_state == True:
                 def_up_check = False
 
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(lavablob_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-
-                    #kippi is faster than lava blob
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-
-                    #lava blob is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
-
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than lava blob
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -4468,14 +4111,14 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
                             print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if burned_check == True:
                                 kippi_burned()
                             if enemy_stats[1] <= 0:
@@ -4512,7 +4155,7 @@ while game_state == True:
                                     def_up_check = True
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if def_up_check == True:
                                     def_counter += 1
                                     if def_counter == 2:
@@ -4520,8 +4163,20 @@ while game_state == True:
                                         enemy_stats[3] -= 50
                                         print(f"[ {enemy_stats[0]}'s defence went down to {enemy_stats[3]}! ]\n")
                                         def_up_check = False
+                                if kippi_stats[3] <= 0:
+                                    break
                     #lavablob is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"      ^----^            `.\n     (  {face} )\n     |     ||        `   ,\n  _  | |   ||    .     .    ,\n  ||_!_|   |!       '      .\n   ---|  T |    `    )^( `\n      |  | |      .|Vo.oV|.  ,\n      !__!_!      ('W'W'W')_.")
                         if signature_move_trigger == True:
                             lavablob_moves = ['RAIN OF EMBERS', 'SOLIDIFY']
                             signature_move = random.choice(lavablob_moves)
@@ -4542,7 +4197,7 @@ while game_state == True:
                                 def_up_check = True
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if def_up_check == True:
                                 def_counter += 1
                                 if def_counter == 2:
@@ -4550,6 +4205,8 @@ while game_state == True:
                                     enemy_stats[3] -= 50
                                     print(f"[ {enemy_stats[0]}'s defence went down to {enemy_stats[3]}! ]\n")
                                     def_up_check = False
+                            if kippi_stats[3] <= 0:
+                                break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -4573,7 +4230,7 @@ while game_state == True:
                             print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if burned_check == True:
                                 kippi_burned()
                             if enemy_stats[1] <= 0:
@@ -4593,41 +4250,9 @@ while game_state == True:
                 frozen_check = False
                 stall_check = 0
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(skeleton_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than skeleton
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    #skeleton is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than skeleton
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if frozen_check == False:
@@ -4652,19 +4277,26 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
                             if battle_input == 'run':
                                 print("You ran away, coward!")
                                 print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                                    random_chance = random.randint(1, 3)
+                                    if random_chance == 1:
+                                        item_drop_common(25)
+                                    elif random_chance == 2:
+                                        item_drop_uncommon(50)
+                                    else:
+                                        item_drop_rare(100)
                                     break
                                 if signature_move_trigger == True:
                                     skeleton_moves = ['GRIMDARK AMBIENCE', 'BARRAGE O’ BONES']
@@ -4684,18 +4316,30 @@ while game_state == True:
                                             print(f"[ ...but {player_name} didn't budge at all! ] \n")
                                         signature_move_trigger = False
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                    if kippi_stats[3] <= 0:
+                                        break
                         if frozen_check == True:
                             for i in range(2):
                                 print(f"                         .-.\n                        (●●)\n                         |=|\n                        __|__\n                      //.=|=.〵.\n                     // .=|=. 〵.\n      ^----^        .〵 .=|=. //\n     (U'>.< )        .〵(_=_)//\n     |     ||          (:| |:)\n  _  | |   ||           || ||\n  ||_!_|   |!           () ()\n   ---|  T |            || ||\n      |  | |            || ||\n      !__!_!           ==' '==")
                                 print(f"[ {player_name} is still terrified! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
                             frozen_check = False
                             print(f"[ {player_name} has gotten over his petrification! ]")
                     #skeleton is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                         .-.\n                        (●●)\n                         |=|\n                        __|__\n                      //.=|=.〵.\n                     // .=|=. 〵.\n      ^----^        .〵 .=|=. //\n     (  {face} )        .〵(_=_)//\n     |     ||          (:| |:)\n  _  | |   ||           || ||\n  ||_!_|   |!           () ()\n   ---|  T |            || ||\n      |  | |            || ||\n      !__!_!           ==' '==")
                         if signature_move_trigger == True:
                             skeleton_moves = ['GRIMDARK AMBIENCE', 'BARRAGE O’ BONES']
                             signature_move = random.choice(skeleton_moves)
@@ -4714,7 +4358,9 @@ while game_state == True:
                                     print(f"[ ...but {player_name} didn't budge at all! ] \n")
                                 signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
+                            if kippi_stats[3] <= 0:
+                                break
                         if frozen_check == False:
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                             face = random.randint(1,4)
@@ -4739,18 +4385,25 @@ while game_state == True:
                                 print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                                 break
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     kippi_stats[1] += enemy_stats[5]
                                     print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                                    random_chance = random.randint(1, 3)
+                                    if random_chance == 1:
+                                        item_drop_common(25)
+                                    elif random_chance == 2:
+                                        item_drop_uncommon(50)
+                                    else:
+                                        item_drop_rare(100)
                                     break
                         if frozen_check == True:
                             for i in range(2):
                                 print(f"                         .-.\n                        (●●)\n                         |=|\n                        __|__\n                      //.=|=.〵.\n                     // .=|=. 〵.\n      ^----^        .〵 .=|=. //\n     (U'>.< )        .〵(_=_)//\n     |     ||          (:| |:)\n  _  | |   ||           || ||\n  ||_!_|   |!           () ()\n   ---|  T |            || ||\n      |  | |            || ||\n      !__!_!           ==' '==")
                                 print(f"[ {player_name} is still terrified! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
                             frozen_check = False
@@ -4766,44 +4419,9 @@ while game_state == True:
                 vanish_check = False
                 
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(wraith_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    
-                    #kippi is faster than wraith
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                            
-                    #wraith is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
-                            
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than wraith
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -4827,23 +4445,30 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print("You ran away, coward!")
                             print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if eternal_check == True:
-                                print(f" [ The whispers in {player_name}'s head keep telling him to fall asleep! ]")
+                                print(f"[ The whispers in {player_name}'s head keep telling him to fall asleep! ]")
                                 kippi_stats[3] -= 5
-                                print(f" [ {player_name}'s health went down to {kippi_stats[3]}! ]")
+                                print(f"[ {player_name}'s health went down to {kippi_stats[3]}! ]")
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
                                 kippi_stats[1] += enemy_stats[5]
                                 print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                                random_chance = random.randint(1, 3)
+                                if random_chance == 1:
+                                    item_drop_common(25)
+                                elif random_chance == 2:
+                                    item_drop_uncommon(50)
+                                else:
+                                    item_drop_rare(50)
                                 if eternal_check == True:
                                     print(f"[ {player_name} doesn't feel the taste of death lingering on their cat tongue anymore. Hooray! ]\n")
                                 break
@@ -4861,7 +4486,7 @@ while game_state == True:
                                     print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                                     break
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
                     #wraith is faster than kippi
@@ -4890,7 +4515,7 @@ while game_state == True:
                                     print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                                     break
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -4916,16 +4541,23 @@ while game_state == True:
                             print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                             break
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if eternal_check == True:
-                                print(f" [ The whispers in {player_name}'s head keep telling him to fall asleep! ]")
+                                print(f"[ The whispers in {player_name}'s head keep telling him to fall asleep! ]")
                                 kippi_stats[3] -= 5
-                                print(f" [ {player_name}'s health went down to {kippi_stats[3]}! ]")
+                                print(f"[ {player_name}'s health went down to {kippi_stats[3]}! ]")
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
                                 kippi_stats[1] += enemy_stats[5]
                                 print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                                random_chance = random.randint(1, 3)
+                                if random_chance == 1:
+                                    item_drop_common(25)
+                                elif random_chance == 2:
+                                    item_drop_uncommon(50)
+                                else:
+                                    item_drop_rare(50)
                                 if eternal_check == True:
                                     print(f"[ {player_name} doesn't feel the taste of death lingering on their cat tongue anymore. Hooray! ]\n")
                                 break
@@ -4941,40 +4573,9 @@ while game_state == True:
                 phoenix_stage_one = True
 
                 while battle_mode and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(phoenix_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4]:
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2]:
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    random_chance = random.randint(1, 3)                    
-                    # kippi is faster than phoenix
-                    if kippi_stats[6] >= enemy_stats[4]:
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                    # phoenix is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4]:
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     # kippi is faster than phoenix
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -5002,7 +4603,7 @@ while game_state == True:
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
 
                         if battle_input == 'run':
@@ -5011,7 +4612,7 @@ while game_state == True:
                             break
 
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 rebirth_counter += 1
                                 if rebirth_counter == 2:
@@ -5038,11 +4639,25 @@ while game_state == True:
                                     print(f"[ ...but {player_name} didn't budge at all! ] \n")
                                 signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
+                                if kippi_stats[3] <= 0:
+                                    break
 
                     # phoenix is faster than kippi
+                    face = random.randint(1, 4)
+                    if face == 1:
+                        face = '•w•'
+                    elif face == 2:
+                        face = '•u•'
+                    elif face == 3:
+                        face = '^W^'
+                    else:
+                        face = '^u^'
+                    if phoenix_stage_one == True:
+                        print(f'''                    _,="( _  )"=,_\n                 _,'   〵_>〵_/    ',_\n                 .7,     (  )     ,〵.\n      ^----^      '/:,  .m  m.  ,:〵'\n     (  {face} )       ')",(/ 〵),"('\n     |     ||          '{'!!'}'\n  _  | |   ||\n  ||_!_|   |!\n   ---|  T |\n      |  | |\n      !__!_!''')
+                    else:
+                        print(f"                                  ,\n                  _/|       |〵.\n                 /  |       |  〵\n                |   〵     /    |\n                | 〵 /     〵/  |\n                | 〵 |     |  / |\n                | 〵_〵/^〵/_ / |\n                |    --(//--    |\n                〵_ 〵     /  _/\n                  〵__  |  __/\n                     〵 _ /\n                     _/  〵_\n                    / _/|〵.〵 ,\n                     /  |  〵 \n      ^----^          / v 〵\n     (  {face} )\n     |     ||\n  _  | |   ||\n  ||_!_|   |!\n   ---|  T |\n      |  | |\n      !__!_!")
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0:
-					
                         if signature_move_trigger == True:
                             phoenix_moves = ['BURST O\' FLAMES', 'REVIVES']
                             signature_move = phoenix_moves[0]
@@ -5055,7 +4670,7 @@ while game_state == True:
                                 print(f"[ ...but {player_name} didn't budge at all! ] \n")
                             signature_move_trigger = False			
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break		
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -5083,7 +4698,7 @@ while game_state == True:
                             print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
                             break			
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 rebirth_counter += 1
                                 if rebirth_counter == 2:
@@ -5109,43 +4724,9 @@ while game_state == True:
                 paralyzed_check = False
 				
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(hellhound_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] > kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    #kippi is faster than hellhound
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-							
-                    #hellhound is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
-							
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than hellhound
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         if paralyzed == False:
@@ -5171,7 +4752,7 @@ while game_state == True:
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
 
                             if battle_input == 'run':
@@ -5183,7 +4764,7 @@ while game_state == True:
                                 if paralyzed_check == True:
                                     paralyzed_trigger = random.randint(1, 2)
                                     if paralyzed_trigger == 1:
-                                        player_attacks()
+                                        player_attacks(kippi_stats[4],enemy_stats[3])
                                         if enemy_stats[1] <= 0:
                                             print(f"[ {enemy_stats[0]} fainted! ]")
                                             print(f"[ {player_name} wins! ]\n")
@@ -5193,12 +4774,19 @@ while game_state == True:
                                     else:
                                         print(f"[ {player_name} is PARALYZED! The static in their body makes them unable to move a single inch! ]")
                                 else:
-                                    player_attacks()
+                                    player_attacks(kippi_stats[4],enemy_stats[3])
                                     if enemy_stats[1] <= 0:
                                         print(f"[ {enemy_stats[0]} fainted! ]")
                                         print(f"[ {player_name} wins! ]\n")
                                         kippi_stats[1] += enemy_stats[5]
                                         print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                                        random_chance = random.randint(1, 3)
+                                        if random_chance == 1:
+                                            item_drop_common(10)
+                                        elif random_chance == 2:
+                                            item_drop_uncommon(25)
+                                        else:
+                                            item_drop_rare(100)
                                         break
                                     stall_check = 0
 
@@ -5220,12 +4808,22 @@ while game_state == True:
                                         paralyzed_check = True
                                         signature_move_trigger = False
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
 										
                     #hellhound is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0:
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f"                  〵           /〵/〵___,\n                 _   ,___/〵/〵〵  ò    /\n                    〵     ó  〵)   XXX\n                       XXX     /    /〵/〵___,\n      ^----^             〵o-o/-o-o/   ò    /\n     (  {face} )              ) /     〵    XXX\n     |     ||             _|    /〵 〵_/\n  _  | |   ||          ,-/   _  〵/   〵\n  ||_!_|   |!         / (   /____,__|  )\n   ---|  T |         (  |_ (    ) 〵) _|\n      |  | |        _/ _)  〵   〵__/  (_\n      !__!_!      (,-(,(,(,/       〵,),),")
                         if paralyzed == False:
                             if signature_move_trigger == True:
                                 hellhound_moves = ['HELLFIRE\'S BITE', 'INFERNAL ROAR']
@@ -5245,10 +4843,9 @@ while game_state == True:
                                     paralyzed_check = True
                                     signature_move_trigger = False
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
-
                             if paralyzed == False:
                                 print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                                 face = random.randint(1,4)
@@ -5276,17 +4873,24 @@ while game_state == True:
                                     if paralyzed_check == True:
                                         paralyzed_trigger = random.randint(1,2)
                                         if paralyzed_trigger == 1 :
-                                            player_attacks()
+                                            player_attacks(kippi_stats[4],enemy_stats[3])
                                             if enemy_stats[1] <= 0:
                                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                                 print(f"[ {player_name} wins! ]\n")
                                                 kippi_stats[1] += enemy_stats[5]
                                                 print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'=,= )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                                                random_chance = random.randint(1, 3)
+                                                if random_chance == 1:
+                                                    item_drop_common(10)
+                                                elif random_chance == 2:
+                                                    item_drop_uncommon(25)
+                                                else:
+                                                    item_drop_rare(100)
                                                 break
                                         else:
                                             print(f"[ {player_name} is PARALYZED! The static in their body makes them unable to move a single inch! ]")
                                     else:
-                                        player_attacks()
+                                        player_attacks(kippi_stats[4],enemy_stats[3])
                                         if enemy_stats[1] <= 0:
                                             print(f"[ {enemy_stats[0]} fainted! ]")
                                             print(f"[ {player_name} wins! ]\n")
@@ -5303,46 +4907,10 @@ while game_state == True:
                 burned_check = False
                 deflect_check = False
                 deflect_counter = 0
-                
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(zealous_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] >= kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    
-                    #kippi is faster than zealous
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                            
-                    #zealous is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
-                            
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than zealous
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -5361,18 +4929,15 @@ while game_state == True:
                         while not battle_input == 'fight' and not battle_input == 'items' and not battle_input == 'run':
                             battle_input = input("[ Please choose either FIGHT, ITEMS, or RUN. Silly kitty! ]\n")
                             battle_input = battle_input.lower()
-                        
                         if battle_input == 'items':
                             inventory_check()
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
-                        
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
-                        
                         if battle_input == 'fight':
                             if deflect_check == True:
                                 print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
@@ -5381,13 +4946,10 @@ while game_state == True:
                                 if deflect_counter == 2:
                                     print(f"[ {enemy_stats[0]}'s barriers have been destroyed! Now's {player_name}'s chance to attack! ]\n")
                                     deflect_check = False
-                            
                             else:
-                                player_attacks()
-                                
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                             if burned_check == True:
-                                kippi_burned()
-                                                                                             
+                                kippi_burned()                                                       
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -5396,11 +4958,9 @@ while game_state == True:
                                 if burned_check == True:
                                     print(f"[ {player_name} fluffy body isn't burning anymore. Hooray! ]\n")
                                 break
-                                
                             if signature_move_trigger == True:
                                 zealous_moves = ['BREATH O\' FLAMES', 'SEDIMENTARY SHIELD', 'ASHES TO ASHES, DUST TO DUST']
                                 signature_move = random.choice(zealous_moves)
-                                
                                 if signature_move == zealous_moves[0]:
                                     print(f"[ {enemy_stats[0]} decided to use {zealous_moves[0]}! ]")
                                     print(f"[ {player_name} feels like a roasted chicken on a barbeque! ]\n")
@@ -5410,13 +4970,11 @@ while game_state == True:
                                     if burned_check == True:
                                         kippi_burned()
                                     signature_move_trigger = False
-                                    
                                 elif signature_move == zealous_moves[1]:
                                     print(f"[ {enemy_stats[0]} decided to use {zealous_moves[1]}! ]")
                                     print(f"[ A sheild of gravel and magma surrounds {enemy_stats[0]}... leaving him impenetrable! ]")
                                     deflect_check = True
                                     signature_move_trigger = False
-                                    
                                 else:
                                     print(f"[ {enemy_stats[0]} decided to use {zealous_moves[2]}! ]")
                                     print(f"[ {enemy_stats[0]} seems to be reciting some... mysterious incantation! Just as {player_name} was trying to deciper what {enemy_stats[0]} was saying... a large METEORITE headed towards {player_name}! ]")
@@ -5427,18 +4985,25 @@ while game_state == True:
                                     else:
                                         print(f"[ ...but {player_name} didn't budge at all! ] \n")
                                     signature_move_trigger = False
-                                                
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
-                                        
                     #zealous is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 :
+                        face = random.randint(1,4)
+                        if face == 1:
+                            face = '•w•'
+                        elif face == 2:
+                            face = '•u•'
+                        elif face == 3:
+                            face = '^W^'
+                        else:
+                            face = '^u^'
+                        print(f'''                       .     _///_,\n                     .      / ` ' '>\n                       )   o'  __/_'>\n                      (   /  _/  )_〵'>\n                       ' "__/   /_/〵_>\n                           ____/_/_/_/\n                          /,---, _/ /\n                         ""  /_/_/_/\n      ^----^                /_(_(_(_                〵\n     (  {face} )              (   〵_〵_〵              )〵\n     |     ||              〵'__〵_〵_〵_            ).〵\n  _  | |   ||               //____|___〵_)           )_/\n  ||_!_|   |!               |  _  〵'__'_(           /'\n   ---|  T |                〵_ (-'〵'___'_〵     __,'_'\n      |  | |                 __) 〵 〵〵___(_   __/.__,'\n      !__!_!              ,((,-,__〵  '", __〵_/. __,'\n                                       '"./_._._-''')
                         if signature_move_trigger == True:
                             zealous_moves = ['BREATH O\' FLAMES', 'SEDIMENTARY SHIELD', 'ASHES TO ASHES, DUST TO DUST']
                             signature_move = random.choice(zealous_moves)
-                            
                             if signature_move == zealous_moves[0]:
                                 print(f"[ {enemy_stats[0]} decided to use {zealous_moves[0]}! ]")
                                 print(f"[ {player_name} feels like a roasted chicken on a barbeque! ]\n")
@@ -5448,13 +5013,11 @@ while game_state == True:
                                 if burned_check == True:
                                     kippi_burned()
                                 signature_move_trigger = False
-                                
                             elif signature_move == zealous_moves[1]:
                                 print(f"[ {enemy_stats[0]} decided to use {zealous_moves[1]}! ]")
                                 print(f"[ A sheild of gravel and magma surrounds {enemy_stats[0]}... leaving him impenetrable! ]")
                                 deflect_check = True
                                 signature_move_trigger = False
-                                
                             else:
                                 print(f"[ {enemy_stats[0]} decided to use {zealous_moves[2]}! ]")
                                 print(f"[ {enemy_stats[0]} seems to be reciting some... mysterious incantation! Just as {player_name} was trying to deciper what {enemy_stats[0]} was saying... a large METEORITE headed towards {player_name}! ]")
@@ -5464,13 +5027,11 @@ while game_state == True:
                                     print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
                                 else:
                                     print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                                signature_move_trigger = False
-                                                
+                                signature_move_trigger = False  
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
-                                
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -5484,16 +5045,13 @@ while game_state == True:
                         print(f'''                       .     _///_,\n                     .      / ` ' '>\n                       )   o'  __/_'>\n                      (   /  _/  )_〵'>\n                       ' "__/   /_/〵_>\n                           ____/_/_/_/\n                          /,---, _/ /\n                         ""  /_/_/_/\n      ^----^                /_(_(_(_                〵\n     (  {face} )              (   〵_〵_〵              )〵\n     |     ||              〵'__〵_〵_〵_            ).〵\n  _  | |   ||               //____|___〵_)           )_/\n  ||_!_|   |!               |  _  〵'__'_(           /'\n   ---|  T |                〵_ (-'〵'___'_〵     __,'_'\n      |  | |                 __) 〵 〵〵___(_   __/.__,'\n      !__!_!              ,((,-,__〵  '", __〵_/. __,'\n                                       '"./_._._-''')
                         battle_input = input(f"[ What will {player_name} do? ]\n")
                         battle_input = battle_input.lower()
-                        
                         while not battle_input == 'fight' and not battle_input == 'items' and not battle_input == 'run':
                             battle_input = input("[ Please choose either FIGHT, ITEMS, or RUN. Silly kitty! ]\n")
                             battle_input = battle_input.lower()
-                        
                         if battle_input == 'items':
                             inventory_check()                            
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
-                        
                         if battle_input == 'fight':
                             if deflect_check == True:
                                 print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
@@ -5503,8 +5061,7 @@ while game_state == True:
                                     print(f"[ {enemy_stats[0]}'s barriers have been destroyed! Now's {player_name}'s chance to attack! ]\n")
                                     deflect_check = False
                             else:
-                                player_attacks()
-                                
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -5521,44 +5078,9 @@ while game_state == True:
                 signature_move_trigger = True
                 
                 while battle_mode == True and kippi_stats[3] > 0:
+                    global enemy_stats
                     enemy_stats = list(wizard_stats.values())
-
-                    def player_attacks():
-                        print(f"[ {player_name} attacks the {enemy_stats[0]}! ]")
-                        if enemy_stats[3] >= kippi_stats[4] :
-                            print(f"[ ...but the {enemy_stats[0]} didn't budge at all! ] \n")
-                        else:
-                            enemy_stats[1] -= (kippi_stats[4] - enemy_stats[3])
-                            print(f"[ {enemy_stats[0]} health is down to {enemy_stats[1]}! ]\n")
-
-                    def enemy_attacks():
-                        print(f"[ {enemy_stats[0]} attacks {player_name}! ]")
-                        if kippi_stats[5] < enemy_stats[2] :
-                            kippi_stats[3] -= (enemy_stats[2] - kippi_stats[5])
-                            print(f"[ {player_name}'s health is down to {kippi_stats[3]}! ] \n")
-                        else:
-                            print(f"[ ...but {player_name} didn't budge at all! ] \n")
-                    
-                    random_chance = random.randint(1, 3)
-                    
-                    #kippi is faster than wizard
-                    if kippi_stats[6] >= enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} manages to react first! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} gets the upper hand! ]")
-                        else:
-                            print(f"[ The swift lil' kitty legs of {player_name} acted on their own! ]")
-                            
-                    #wizard is faster than kippi
-                    if kippi_stats[6] < enemy_stats[4] :
-                        if random_chance == 1:
-                            print(f"[ {player_name} dissociated themselves from the situation for a second, and now they're being attacked! ]")
-                        elif random_chance == 2:
-                            print(f"[ {player_name} was blindsided by the enemy's swiftness! ]")
-                        else:
-                            print(f"[ {player_name} could not keep up with the enemy's actions in time! ]")
-                            
+                    speed_check(kippi_stats[6],enemy_stats[4])
                     #kippi is faster than wizard
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0 and deteriorate_count == 0 :
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -5577,45 +5099,40 @@ while game_state == True:
                         while not battle_input == 'fight' and not battle_input == 'items' and not battle_input == 'run':
                             battle_input = input("[ Please choose either FIGHT, ITEMS, or RUN. Silly kitty! ]\n")
                             battle_input = battle_input.lower()
-                        
                         if battle_input == 'items':
                             inventory_check()
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
-                        
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
-                        
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if deteriorate_count == 0 and enemy_stats[1] <= 75:
-                                print(f"[ With {player_name}'s attack, {enemy_stats[0]} stumbles to the ground. His cane laying bare on Volcana's gravelly grounds. Just as {player_name} was about to deal a final blow, though, {enemy_stats[0]} giggles maniacally. ] ")
+                                print(f"[ With {player_name}'s attack, {enemy_stats[0]} stumbles to the ground. His cane laying bare on Volcana's gravelly grounds. Just as {player_name} was about to deal a final blow, though, {enemy_stats[0]} giggles maniacally. ]")
                                 print(f'''[ "Oh... Silly {player_name}. Have you forgotten who I am? Who I WAS?" His eyes stares deeply into {player_name}'s. ]''')
                                 print(f'''[ "That... that wasn't even an ounce of my full power!" As {enemy_stats[0]} began to stand up... ]''')
                                 print(f"[ {enemy_stats[0]} decided to DETERIORATE! ]")
                                 deteriorate_count += 1
                             else:
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 if kippi_stats[3] <= 0:
                                     break
-                                        
                     #wizard is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 and deteriorate_count == 0:
                         if deteriorate_count == 0 and enemy_stats[1] <= 75:
-                            print(f"[ With {player_name}'s attack, {enemy_stats[0]} stumbles to the ground. His cane laying bare on Volcana's gravelly grounds. Just as {player_name} was about to deal a final blow, though, {enemy_stats[0]} giggles maniacally. ] ")
+                            print(f"[ With {player_name}'s attack, {enemy_stats[0]} stumbles to the ground. His cane laying bare on Volcana's gravelly grounds. Just as {player_name} was about to deal a final blow, though, {enemy_stats[0]} giggles maniacally. ]")
                             print(f'''[ "Oh... Silly {player_name}. Have you forgotten who I am? Who I WAS?" His eyes stares deeply into {player_name}'s. ]''')
                             print(f'''[ "That... that wasn't even an ounce of my full power!" As {enemy_stats[0]} began to stand up... ]''')
                             print(f"[ {enemy_stats[0]} decided to DETERIORATE! ]")
                             deteriorate_count += 1
                             break
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
-                                
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                             face = random.randint(1,4)
                             if face == 1:
@@ -5629,29 +5146,23 @@ while game_state == True:
                             print(f"                        ___\n                  〵   /o  _〵 __\n                 _    /  o〵  |_ 〵\n      ^----^          ^____^   |〵〵\n     (  {face} )        ( ò-ó =)__*_〵〵\n     |     ||        ||〵/  ____ |'/\n  _  | |   ||        ||    |    / /\n  ||_!_|   |!        !|    |   / /\n   ---|  T |          | T  |  / /\n      |  | |          | |  | /_/\n      !__!_!          !_!__!")
                             battle_input = input(f"[ What will {player_name} do? ]\n")
                             battle_input = battle_input.lower()
-                            
                             while not battle_input == 'fight' and not battle_input == 'items' and not battle_input == 'run':
                                 battle_input = input("[ Please choose either FIGHT, ITEMS, or RUN. Silly kitty! ]\n")
                                 battle_input = battle_input.lower()
-                            
                             if battle_input == 'items':
                                 inventory_check()
-
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     break
-                                
                     #kippi is faster than zealousx
                     while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0 and deteriorate_count == 1:
                         print('''[ "BEHOLD! I, ZEALOUS! THE MOST POWERFUL MAGICAL BEING TO EVER EXIST!" ]''')
                         enemy_stats = list(zealousx_stats.values())
-                        random_chance = random.randint(1, 3)
-                                
                         #kippi is faster than zealousx
                         while kippi_stats[6] >= enemy_stats[4] and kippi_stats[3] > 0:
                             print("[FIGHT] [ITEMS] [RUN]\n".center(32))
@@ -5670,41 +5181,34 @@ while game_state == True:
                             while not battle_input == 'fight' and not battle_input == 'items' and not battle_input == 'run':
                                 battle_input = input("[ Please choose either FIGHT, ITEMS, or RUN. Silly kitty! ]\n")
                                 battle_input = battle_input.lower()
-                            
                             if battle_input == 'items':
                                 inventory_check()
                                 stall_check += 1
                             if stall_check == 3:
                                 print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                                enemy_attacks()
+                                enemy_attacks(kippi_stats[5],enemy_stats[2])
                                 stall_check = 0
-                            
                             if battle_input == 'run':
                                 print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
-                            
                             if battle_input == 'fight':
-                                player_attacks()
+                                player_attacks(kippi_stats[4],enemy_stats[3])
                                 if enemy_stats[1] <= 0:
                                     print(f"[ {enemy_stats[0]} fainted! ]")
                                     print(f"[ {player_name} wins! ]\n")
                                     break
-                                
                                 if deathdoor == True:
-                                    print(f" [ {player_name}'s tiny body desperately tries to hold on a little longer... ]")
+                                    print(f"[ {player_name}'s tiny body desperately tries to hold on a little longer... ]")
                                     kippi_stats[3] -= 10
-                                    print(f" [ {player_name}'s health went down to {kippi_stats[3]}! ]")
-                                    
+                                    print(f"[ {player_name}'s health went down to {kippi_stats[3]}! ]")
                                 if signature_move_trigger == True:
                                     print(f'''[ "Haw-haw-haw!" {enemy_stats[0]} laughs. "How does it feel to be KNOCKING ON DEATH'S DOOR!?" ]''')
                                     print(f"[ As soon as he said that, {player_name} could feel their whole body becoming more tired by the second... ]")
                                     deathdoor = True
                                     signature_move_trigger = False
-                                    
                                 else:
-                                    enemy_attacks()
+                                    enemy_attacks(kippi_stats[5],enemy_stats[2])
                                     if kippi_stats[3] <= 0:
                                         break
-                                            
                     #zealousx is faster than kippi
                     while kippi_stats[6] < enemy_stats[4] and kippi_stats[3] > 0 and deteriorate_count == 1:
                         face = random.randint(1,4)
@@ -5719,20 +5223,18 @@ while game_state == True:
                         print(f'''                                                                 ,....,.\n                                                             ..''   .'\n                                                          .'"       |\n                                                       .''          〵\n                                                    .''              〵.\n                                                  .'                  .".,\n                                                ,:'             ..,'"'   '...,..::/"".....\n                                              /'"          .,'"'  .,',:,'""'         .,''\n                                            ,'.'      .,'"' ..,""" ""         .'   ."'\n                                          ,'  〵, ..,''  .,''. ..,'""        ./   ."\n                                        ."     .,"  .,'".,"'./           ..''   /\n                                       ,'    .'  ./'.,"'  .'  "'     ." '.     /\n                                     .'   ./' ./"."〵,..,''     '" ../,    ,  |\n                                    ,   ./' .'./'|/     ............        ',|\n                                   /   /' ,'.".,'""〵.....'""""""""'  .::/'.., |\n                                  /  ." ,' ':〵 """  |  ,     ''          '""   〵\n                                 /  /'.''. |:::::::""' ,' ' ''. ".,.,  """'    .""\n                                | ." /.,":. ""..,   "〵'.."'..  ;"'  '〵.'""" ."\n                                | 〵.:〵.   '""./〵〵 | ' '" .,"".           /\n                                /〵'   '"..     ", 〵〵,',     "'..  .,     '\n                               /.'",''..,  '〵,  '〵 ". '〵'.,    , "'. "'.,|\n                              .,'        '". ',   〵 '.".. ''../'      "" __〵\n                              '            〵,',   〵  '.'〵..,  ","'  .'"\n                                            |  |    '| ,〵""'〵/.  |  ."\n                               ."          .|  .    / / ./'. '.".' /'\n                               /'        ..|':"""〵././ /   "  '/〵.'\n                              //  ./  .'"    /' ./'.' .'  | ..,  ':|\n                            ./:  ,/   |",   ' ."'  :  '   |    .../:,\n                           .'.'〵/   /.'           ''  .,   ..〵'\n                         〵.〵".'   /"    ,"'〵...,    "〵.〵| ",\n                        /    ./""""'   ..:    ',|  "".,    '〵  ',\n                     .,' "'  〵|     "".'".    '/  .| '〵.    ", '〵\n                    /         〵.    ../,   "./ '〵 |' 〵/"" '".'〵 〵\n                   /   〵〵:. 〵,"〵::'  ./""'    ./|  .'     .'"/| '|\n                   ' ,"〵:"/"""  /'  ."〵' .., |:| .| |'   .'' .〵|  ',\n                   |/  / /'    .'| /  |.〵,    /'"/. | |:〵..," .||  〵\n                   '' /.'      //〵'  '〵/〵:. :,/"'::.  ,   ..::' |  |\n                               ||'/,   '〵〵/"〵'/|   '〵 '"::::"| | .|\n                               || 〵〵     "".   ...,  '.  〵〵..|  |' |\n                               ||  "〵,        .".〵, ". ',| 〵 '|  |  |\n                                '             |〵|'|〵/.''〵||〵  | |  |\n                                              ||〵/"/|'〵, ., / / /  ,\n                                                ' 〵  "   '"  / / .' /\n                                                   '      .'".' .' /\n                                                     ..'"'.." ." ."\n                                                 .,"":.'""..'" ."\n                                            .,:'"'"'  .'"  ..'"\n                                          ." ."'..'""...,"'\n                                       .." "    , ""'\n                                      /  . :/"'\n                                    .'  :/'\n                                   /  /'\n                                  / .'\n                                 / '\n                                /.'\n                                '\n      ^----^\n     (  {face} )\n     |     ||\n  _  | |   ||\n  ||_!_|   |!\n   ---|  T |\n      |  | |\n      !__!_!''')
                         print('''[ "BEHOLD! I, ZEALOUS! THE MOST POWERFUL MAGICAL BEING TO EVER EXIST!" ]''')
                         if deathdoor == True:
-                            print(f" [ {player_name}'s tiny body desperately tries to hold on a little longer... ]")
+                            print(f"[ {player_name}'s tiny body desperately tries to hold on a little longer... ]")
                             kippi_stats[3] -= 10
-                            print(f" [ {player_name}'s health went down to {kippi_stats[3]}! ]")
-                                
+                            print(f"[ {player_name}'s health went down to {kippi_stats[3]}! ]")
                         if signature_move_trigger == True:
                             print(f'''[ "Haw-haw-haw!" {enemy_stats[0]} laughs. "How does it feel to be KNOCKING ON DEATH'S DOOR!?" ]''')
                             print(f"[ As soon as he said that, {player_name} could feel their whole body becoming more tired by the second... ]")
                             deathdoor = True
                             signature_move_trigger = False
                         else:
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             if kippi_stats[3] <= 0:
                                 break
-                                
                         print("[FIGHT] [ITEMS] [RUN]\n".center(32))
                         face = random.randint(1,4)
                         if face == 1:
@@ -5746,22 +5248,20 @@ while game_state == True:
                         print(f'''                                                                 ,....,.\n                                                             ..''   .'\n                                                          .'"       |\n                                                       .''          〵\n                                                    .''              〵.\n                                                  .'                  .".,\n                                                ,:'             ..,'"'   '...,..::/"".....\n                                              /'"          .,'"'  .,',:,'""'         .,''\n                                            ,'.'      .,'"' ..,""" ""         .'   ."'\n                                          ,'  〵, ..,''  .,''. ..,'""        ./   ."\n                                        ."     .,"  .,'".,"'./           ..''   /\n                                       ,'    .'  ./'.,"'  .'  "'     ." '.     /\n                                     .'   ./' ./"."〵,..,''     '" ../,    ,  |\n                                    ,   ./' .'./'|/     ............        ',|\n                                   /   /' ,'.".,'""〵.....'""""""""'  .::/'.., |\n                                  /  ." ,' ':〵 """  |  ,     ''          '""   〵\n                                 /  /'.''. |:::::::""' ,' ' ''. ".,.,  """'    .""\n                                | ." /.,":. ""..,   "〵'.."'..  ;"'  '〵.'""" ."\n                                | 〵.:〵.   '""./〵〵 | ' '" .,"".           /\n                                /〵'   '"..     ", 〵〵,',     "'..  .,     '\n                               /.'",''..,  '〵,  '〵 ". '〵'.,    , "'. "'.,|\n                              .,'        '". ',   〵 '.".. ''../'      "" __〵\n                              '            〵,',   〵  '.'〵..,  ","'  .'"\n                                            |  |    '| ,〵""'〵/.  |  ."\n                               ."          .|  .    / / ./'. '.".' /'\n                               /'        ..|':"""〵././ /   "  '/〵.'\n                              //  ./  .'"    /' ./'.' .'  | ..,  ':|\n                            ./:  ,/   |",   ' ."'  :  '   |    .../:,\n                           .'.'〵/   /.'           ''  .,   ..〵'\n                         〵.〵".'   /"    ,"'〵...,    "〵.〵| ",\n                        /    ./""""'   ..:    ',|  "".,    '〵  ',\n                     .,' "'  〵|     "".'".    '/  .| '〵.    ", '〵\n                    /         〵.    ../,   "./ '〵 |' 〵/"" '".'〵 〵\n                   /   〵〵:. 〵,"〵::'  ./""'    ./|  .'     .'"/| '|\n                   ' ,"〵:"/"""  /'  ."〵' .., |:| .| |'   .'' .〵|  ',\n                   |/  / /'    .'| /  |.〵,    /'"/. | |:〵..," .||  〵\n                   '' /.'      //〵'  '〵/〵:. :,/"'::.  ,   ..::' |  |\n                               ||'/,   '〵〵/"〵'/|   '〵 '"::::"| | .|\n                               || 〵〵     "".   ...,  '.  〵〵..|  |' |\n                               ||  "〵,        .".〵, ". ',| 〵 '|  |  |\n                                '             |〵|'|〵/.''〵||〵  | |  |\n                                              ||〵/"/|'〵, ., / / /  ,\n                                                ' 〵  "   '"  / / .' /\n                                                   '      .'".' .' /\n                                                     ..'"'.." ." ."\n                                                 .,"":.'""..'" ."\n                                            .,:'"'"'  .'"  ..'"\n                                          ." ."'..'""...,"'\n                                       .." "    , ""'\n                                      /  . :/"'\n                                    .'  :/'\n                                   /  /'\n                                  / .'\n                                 / '\n                                /.'\n                                '\n      ^----^\n     (  {face} )\n     |     ||\n  _  | |   ||\n  ||_!_|   |!\n   ---|  T |\n      |  | |\n      !__!_!''')
                         battle_input = input(f"[ What will {player_name} do? ]\n")
                         battle_input = battle_input.lower()
-                        
                         while not battle_input == 'fight' and not battle_input == 'items' and not battle_input == 'run':
                             battle_input = input("[ Please choose either FIGHT, ITEMS, or RUN. Silly kitty! ]\n")
                             battle_input = battle_input.lower()
-                        
                         if battle_input == 'items':
                             inventory_check()
                             stall_check += 1
                         if stall_check == 3:
                             print(f"[ {player_name} took too long staring at their bag... that the {enemy_stats[0]} decided to attack while they're distracted! ]")
-                            enemy_attacks()
+                            enemy_attacks(kippi_stats[5],enemy_stats[2])
                             stall_check = 0
                         if battle_input == 'run':
                             print(f"[ {player_name}'s legs keep shaking from being too scared... They can't run away! ]")
                         if battle_input == 'fight':
-                            player_attacks()
+                            player_attacks(kippi_stats[4],enemy_stats[3])
                             if enemy_stats[1] <= 0:
                                 print(f"[ {enemy_stats[0]} fainted! ]")
                                 print(f"[ {player_name} wins! ]\n")
@@ -5777,23 +5277,25 @@ while game_state == True:
             if continue_game == True: #picheolin
                 player_name = checkpoint_data["player_name"]
                 kippi_stats = checkpoint_data["kippi_stats"]
-                last_played_location = checkpoint_data["last_played_location"]
                 inventory = checkpoint_data["inventory"]                
                 head = checkpoint_data["head"]
-                if head == " ":
-                    head = []
                 body = checkpoint_data["body"]
-                if body == " ":
-                    body = []
                 feet = checkpoint_data["feet"]
-                if feet == " ":
-                    feet = []
                 hand = checkpoint_data["hand"]
-                if hand == " ":
-                    hand = []
+                meanie_counter = checkpoint_data["meanie_counter"]
 
-            #introduction
-            while last_played_location == "Intro":
+            if inventory == ['']:
+                inventory = []
+            if head == ['']:
+                head = []
+            if body == ['']:
+                body = []
+            if feet == ['']:
+                feet = []
+            if hand == ['']:
+                hand = []
+            
+            while kippi_stats[0] == 0:
                 print("                  [〵\n                  |〵)                               ____\n                  |                               __(_   )__\n                  Y〵         ___               _(          )\n                 T  〵      __)  )--.          (     )-----`\n                J    〵  ,-(         )_         `---'\n               Y/T`-._〵(     (       _)                 __\n               /[|   ]|  `-(__  ___)-`  |〵          ,-(  __)\n               | |    |      (__)       J'         (     )\n   _           | |  ] |    _           /;〵          `-  '\n  (,,)        [| |    |    L'         /;  〵\n             /||.| /〵|   /〵        /.,-._〵       ___ _\n            /_|||| || |  /  〵       | |{  |       (._.'_)\n  /〵       | 〵|| '` |_ _ {|        | | U |   /〵\n /v^〵/〵  `|  Y | [  '-' '--''-''-=-'`'   | ,`^v〵/〵,`〵\n/ ,'./  〵` |[   |       [     __   L    ] |      /^v〵  〵\n,'     `    |    |           ,`##Y.   ]    |___Y Y____,_,,_,,_\n--   -----.-(] [ |   ]     o/####U|o      ]|| /`-, Y   _   Y  Y\n   Y Y  --;`~T   |      }  〵####U|[〵 _,.-(^) ,-'  _  (^)__  _\n  Y  YY   ;'~~l  |   L    [|〵###U'E'〵 〵〵Y-` _  (^) _Y  _\n Y  Y Y   ;〵~〵 | [      _,'-〵`= = '.〵_ ,`   (^)(^) (^) (^)\n     --   ;〵~~〵|  _,.-'`_  `.〵_..-'=   _ . ,_ Y_ Y_ _Y  _Y__\n    _    _; 〵~( Y``   Y (^) / `,      (^)      _   (^) (^)\n   (^)  (^)`._~ /  L 〵 _.Y'`  _  ` --  Y - - -(^) - Y - Y -\n    Y    Y    `'--..,-'`      (^)   _  -    _   Y ____\n      --           _    _ --   Y   (^)   _ (^)  ===   ----\n          __   -  (^)  (^)      --- Y   (^) Y\n      _            Y    Y                Y")
                 print("[ Once, there was a bustling little town that was considered a home for thousands of kitties, called Nyuwuwovilla. The residents go about their day-today life contributing to society. However, there was one that was not like the other kitties... And that one kitty is you, Kippi! ]\n")
                 print("[ Dishevelled and ignored by the whole town, you wander aimlessly around the whole area with your head down. You have been trying to find a job that was suited for you, but no matter how hard you tried, you managed to mess it up. You’ve broken more plates than you can count during your time as a waiter for a run-down restaurant, lost too many parcels that the whole town literally banned you from ever handling delivery jobs, and worst of all, you've almost got yourself arrested because you almost fed a baby kitty to an ogre, thinking she was its mom! Because of this, you are left with not a single penny under your name... ]\n")
@@ -5904,7 +5406,7 @@ while game_state == True:
                     if n == 1:
                         print(f"{n}. [ Yes! ]")
                     else:
-                        print(f"{n}. [ No. ]")
+                        print(f"{n}. [ No. ]\n")
                 while True:
                     dialogue_choice = input("[ What would you like to say to him? ]\n")
                     while dialogue_choice not in map(str, dialogue_options):
@@ -5930,248 +5432,190 @@ while game_state == True:
                 print(f'''[ Suddenly, a flash of light casts onto {player_name}’s eyes, and his body slumps into a patch of grass. {player_name} looks around. This… This is Floresta! But… where is the wizard?]\n''')
                 print(f'''[ {player_name} flinches, as they hear a voice in their head. “Nowo, nowo, {player_name}! No need to be so impwessed with mie magicaw capabiwities! Head on ovew to Tundwa nowo.” The Wizard of Pawz orders. The wizard can communicate telepathically? “Ah, but be cawefuw! Dewe awe some hostiwe beasts awound. Don’t pewish! Bye-bye!”]\n''')
                 print(f'''[ Even though {player_name} would like to ask the wizard more questions, by talking to themselves, the wizard did not answer. Letting out a sigh of annoyance… Their journey begins here!]\n''')
-                last_played_location = "Floresta"
-                break
+                kippi_stats_perm[0] += 1
+                kippi_stats[0] = kippi_stats_perm[0]
                         
             #the actual game
             #floresta
-            while last_played_location == "Floresta":
-                while kippi_stats[0] < 10 :
-                    if enemy_encounter_check == True:
-                        floresta_location = random.randint(1,6)
-                    else:
-                        floresta_location = random.randint(1,3)
-                        enemy_encounter_check = True
-                    if floresta_location == 1:
-                        print("                               * *    \n             * *            *    *  *\n          *   *    *     *  *    *     *  *\n    *  *      *        *     *    *  *    *\n  *       *    *   * *   *    *    *    *   *\n  * *      *  *  * *     *  *    * * .#  *   *\n *    *  #  *   *  *   *     * #.  .# *   *\n* *     :# * .*     *      #.  #: #  * *    *\n*   * *  ## #     *   * *  #. ##        *\n *     * ###    *            ###\n   *  * ##   *                ##\n      .##                      ##.\n     :##.                      .##:\n    :###                       :###\n     ;###                     ;###\n    ,####.                   ,####.\n   .######.                 .######.\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`\n")
-                        print(f"[ As the wind blows stronger, the viridescent leaves of the trees around {player_name} keep falling to the ground, gracefully. ]\n[ {player_name} wishes they could simply make a pile of leaves, jump into them, and make an adsolute mess, but alas, to finish their quest was their ultimate priority. No playing around! ]")
-                    elif floresta_location == 2:
-                        print("     @%      @%         \n     `@%.  `;@%.      @@%;         \n      `@%%. `@%%    ;@@%;        \n       ;@%. :@%%  %@@%;       \n         %@bd%%%bd%%:;     \n          #@%%%%%:;;\n            %@@%::;\n            %@@(o);  . '         \n          %@@@;:(.,'         \n        `.. %@@@::;         \n           `)@o%::;         \n            %(o)::;        \n           .%@@%::;         \n           ;%@@%::;.          \n          ;%@@%%:;;;. \n     ...;%@@@%%:;;;;,. \n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
-                        print(f"[ {player_name} could see a couple of dead trees around... ]\n[ {player_name} feel a bit unsettled, but they try their best to pay no mind to it. ]")
-                    elif floresta_location == 3:
-                        print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
-                        random_chance_input = input(f"[ {player_name} could see some berry bushes around them! They feel tempted to see what's behind them. ]\n[ Would you like to take a peek? ]\n")
+            while kippi_stats[0] > 0 and kippi_stats[0] < 10 :
+                if enemy_encounter_check == True:
+                    floresta_location = random.randint(1,6)
+                else:
+                    floresta_location = random.randint(1,3)
+                    enemy_encounter_check = True
+                if floresta_location == 1:
+                    print("                               * *    \n             * *            *    *  *\n          *   *    *     *  *    *     *  *\n    *  *      *        *     *    *  *    *\n  *       *    *   * *   *    *    *    *   *\n  * *      *  *  * *     *  *    * * .#  *   *\n *    *  #  *   *  *   *     * #.  .# *   *\n* *     :# * .*     *      #.  #: #  * *    *\n*   * *  ## #     *   * *  #. ##        *\n *     * ###    *            ###\n   *  * ##   *                ##\n      .##                      ##.\n     :##.                      .##:\n    :###                       :###\n     ;###                     ;###\n    ,####.                   ,####.\n   .######.                 .######.\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`\n")
+                    print(f"[ As the wind blows stronger, the viridescent leaves of the trees around {player_name} keep falling to the ground, gracefully. ]\n[ {player_name} wishes they could simply make a pile of leaves, jump into them, and make an adsolute mess, but alas, to finish their quest was their ultimate priority. No playing around! ]")
+                elif floresta_location == 2:
+                    print("     @%      @%         \n     `@%.  `;@%.      @@%;         \n      `@%%. `@%%    ;@@%;        \n       ;@%. :@%%  %@@%;       \n         %@bd%%%bd%%:;     \n          #@%%%%%:;;\n            %@@%::;\n            %@@(o);  . '         \n          %@@@;:(.,'         \n        `.. %@@@::;         \n           `)@o%::;         \n            %(o)::;        \n           .%@@%::;         \n           ;%@@%::;.          \n          ;%@@%%:;;;. \n     ...;%@@@%%:;;;;,. \n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
+                    print(f"[ {player_name} could see a couple of dead trees around... ]\n[ {player_name} feel a bit unsettled, but they try their best to pay no mind to it. ]")
+                elif floresta_location == 3:
+                    print("       _____                     ___\n      (#.#.#)__                _(#.#\n     (#.#.#.#)#)              (#.#.#\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  •w• )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
+                    random_chance_input = input(f"[ {player_name} could see some berry bushes around them! They feel tempted to see what's behind them. ]\n[ Would you like to take a peek? ]\n")
+                    random_chance_input = random_chance_input.lower()
+                    while random_chance_input not in yes_or_no:
+                        random_chance_input = input("[ Uh... Is that a no...? ]\n")
                         random_chance_input = random_chance_input.lower()
-                        while random_chance_input not in yes_or_no:
-                            random_chance_input = input("[ Uh... Is that a no...? ]\n")
-                            random_chance_input = random_chance_input.lower()
-                        if random_chance_input == 'yes' :
-                            random_chance = random.randint(1,4)
-                            if random_chance == 1:
-                                print("[ A SKUNK suddenly appeared out of the bush! ]")
-                                skunk_encounter()
-                            elif random_chance == 2:
-                                print("[ A MONKEY suddenly appeared out of the bush! ]")
-                                monkey_encounter()
-                            elif random_chance == 3:
-                                print("[ A RAVEN suddenly appeared out of the bush! ]")
-                                raven_encounter()
-                            else:
-                                item = random.choice(common_items)
-                                print(f"[ {player_name} found a {item} inside of the bush! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                                inventory.append(item)
-                        if random_chance_input == 'no' :
-                            continue
-                    elif floresta_location == 4:
-                        print(f"[ While {player_name} was walking... a SKUNK appeared out of nowhere! ]")
-                        skunk_encounter()
-                    elif floresta_location == 5:
-                        print(f"[ While {player_name} was walking... a MONKEY appeared out of nowhere! ]")
-                        monkey_encounter()
-                    else:
-                        print(f"[ While {player_name} was walking... a RAVEN appeared out of nowhere! ]")
-                        raven_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                    if random_chance_input == 'yes' :
+                        random_chance = random.randint(1,4)
+                        if random_chance == 1:
+                            print("[ A SKUNK suddenly appeared out of the bush! ]")
+                            skunk_encounter()
+                        elif random_chance == 2:
+                            print("[ A MONKEY suddenly appeared out of the bush! ]")
+                            monkey_encounter()
+                        elif random_chance == 3:
+                            print("[ A RAVEN suddenly appeared out of the bush! ]")
+                            raven_encounter()
+                        else:
+                            item = random.choice(common_items)
+                            print(f"[ {player_name} found a {item} inside of the bush! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
+                            inventory.append(item)
+                    if random_chance_input == 'no' :
+                        continue
+                elif floresta_location == 4:
+                    print(f"[ While {player_name} was walking... a SKUNK appeared out of nowhere! ]")
+                    skunk_encounter()
+                elif floresta_location == 5:
+                    print(f"[ While {player_name} was walking... a MONKEY appeared out of nowhere! ]")
+                    monkey_encounter()
+                else:
+                    print(f"[ While {player_name} was walking... a RAVEN appeared out of nowhere! ]")
+                    raven_encounter()
+                if kippi_stats[3] <= 0:
+                    game_over_mechanic()
+                    break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                
-                while kippi_stats[0] == 10 :
-                    print("     @%      @%               (#%#%#%#%# \n     `@%.  `;@%.      @@%;      (#%#%#%#\n      `@%%. `@%%    ;@@%;        (%#%#%#\n       ;@%. :@%%  %@@%;          /   #%#\n         %@bd%%%bd%%:;          /    _/\n          #@%%%%%:;;           /    /__\n            %@@%::;           /___    /\n            %@@(o);  . '         /   /\n          %@@@;:(.,'            /   /\n        `.. %@@@::;            /   /\n           `)@o%::;           /   /\n            %(o)::;          /__ /_\n           .%@@%::;            / _/\n           ;%@@%::;.     〵 . /_/\n          ;%@@%%:;;;.    .     //\n     ...;%@@@%%:;;;;,.         /\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  'o' )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
-                    print(f"[ {player_name} LEFT ear perked up as they hear a sudden thunder in the distance! ...even though it's daytime? ]")
-                    print(f'[ {player_name} hears a familiar voice inside their head, saying... "Be cawefuw, {player_name}, dawe seems to be a dangewous entitie nearby!" ]')
-                    direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ]\n")
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+            
+            while kippi_stats[0] == 10 :
+                print("     @%      @%               (#%#%#%#%# \n     `@%.  `;@%.      @@%;      (#%#%#%#\n      `@%%. `@%%    ;@@%;        (%#%#%#\n       ;@%. :@%%  %@@%;          /   #%#\n         %@bd%%%bd%%:;          /    _/\n          #@%%%%%:;;           /    /__\n            %@@%::;           /___    /\n            %@@(o);  . '         /   /\n          %@@@;:(.,'            /   /\n        `.. %@@@::;            /   /\n           `)@o%::;           /   /\n            %(o)::;          /__ /_\n           .%@@%::;            / _/\n           ;%@@%::;.     〵 . /_/\n          ;%@@%%:;;;.    .     //\n     ...;%@@@%%:;;;;,.         /\n`.`.`.^----^`.`.`.`.`/     /`.`.`.`.\n`.`.`(  'o' )`.`.`.`/     /`.`.`.`.`\n`.`.`|     ||`.`.`./     /`.`.`.`.`.\n`._.`| |   ||`.`.`/     /`.`.`.`.`.`\n` ||_!_|   |!`.`./     /`.`.`.`.`.`.\n`.`---|  T |`.`./     /`.`.`.`.`.``.\n      |  | |\n      !__!_!\n________________       ________________\n`.`.`.`.`.`.`.`.〵     〵`.`.`.`.`.`.`.`")
+                print(f"[ {player_name} LEFT ear perked up as they hear a sudden thunder in the distance! ...even though it's daytime? ]")
+                print(f'[ {player_name} hears a familiar voice inside their head, saying... "Be cawefuw, {player_name}, dawe seems to be a dangewous entitie nearby!" ]')
+                direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ]\n")
+                direction_choice = direction_choice.lower()
+                while 'inventory' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
+                    direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
                     direction_choice = direction_choice.lower()
-                    while 'inventory' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
-                            direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
-                            direction_choice = direction_choice.lower()
-                    if 'inventory' in direction_choice:
-                        inventory_check()
-                    elif 'left' in direction_choice:
-                        print(f"[ As most kitfolk would be in this situation, {player_name}'s curiosity got the better of them. {player_name} decides walk in the direction of where the thunder was! ]")
-                        print(f"[ At first, they did not see anything out of the usual. Just wide plains of grass from all directions, and maybe some scary-looking dead trees. Just as {player_name} was about to head in the other direction, however, a sudden, loud squeal could be heard from afar— ]")
-                        print(f"[ {player_name}'s whole body flinched as they saw a giant, luminescent RHINO charging towards them! ]")
-                        print(f"[ Using their kitty reflexes, though, {player_name} manages to swerve just in time before the RHINO manages to flung him into the air like a cannonball! ]")
-                        print(f'''[ "I guess it's time t-to fight?!?!" {player_name} thought in their head. ]\n''')
-                    elif 'right' or 'forward' in direction_choice:
-                        print(f"[ Adhering to PAWZ's word, {player_name} decides to walk away from where the thunder appeared. ]")
-                        print(f"[ As {player_name} took a few steps, however, rapid footsteps could be heard from... behind!? And they're getting closer— ]")
-                        print(f"[ Before {player_name} could swerve out of the it's way, a large, luminescent RHINO caused {player_name} to be flung into the air! When {player_name}'s body finally kisses Mother Earth's dirt, a large, painful crunch could be heard! ]")
-                        kippi_stats[3] -= 5
-                        print(f"[ Writhing from the pain... {player_name}'s health is down to {kippi_stats[3]}! ] ")
-                        print(f"[ ...Not wanting to stand down, however— {player_name} decides to FIGHT the RHINO! ]\n")
-                    rhino_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                if 'inventory' in direction_choice:
+                    inventory_check()
+                elif 'left' in direction_choice:
+                    print(f"[ As most kitfolk would be in this situation, {player_name}'s curiosity got the better of them. {player_name} decides walk in the direction of where the thunder was! ]")
+                    print(f"[ At first, they did not see anything out of the usual. Just wide plains of grass from all directions, and maybe some scary-looking dead trees. Just as {player_name} was about to head in the other direction, however, a sudden, loud squeal could be heard from afar— ]")
+                    print(f"[ {player_name}'s whole body flinched as they saw a giant, luminescent RHINO charging towards them! ]")
+                    print(f"[ Using their kitty reflexes, though, {player_name} manages to swerve just in time before the RHINO manages to flung him into the air like a cannonball! ]")
+                    print(f'''[ "I guess it's time t-to fight?!?!" {player_name} thought in their head. ]\n''')
+                elif 'right' or 'forward' in direction_choice:
+                    print(f"[ Adhering to PAWZ's word, {player_name} decides to walk away from where the thunder appeared. ]")
+                    print(f"[ As {player_name} took a few steps, however, rapid footsteps could be heard from... behind!? And they're getting closer— ]")
+                    print(f"[ Before {player_name} could swerve out of the it's way, a large, luminescent RHINO caused {player_name} to be flung into the air! When {player_name}'s body finally kisses Mother Earth's dirt, a large, painful crunch could be heard! ]")
+                    kippi_stats[3] -= 5
+                    print(f"[ Writhing from the pain... {player_name}'s health is down to {kippi_stats[3]}! ]")
+                    print(f"[ ...Not wanting to stand down, however— {player_name} decides to FIGHT the RHINO! ]\n")
+                rhino_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    #cutscene 1
-                    print(f'''[ "Wowozews! Congwatuwations on defeatim dat whino, {player_name}! Awthuff I wouwd saie dat you desewve a nice, wong west, dawe's stiww a wong ways to go!" The voice in {player_name}'s head tells them. ]''')
-                    print(f"[ As {player_name} waddles out of Floresta, pretty snowflakes could be seen dropping from the sky, how pretty! ]")
-                    print(f'''[ "This must be... Tundra!" {player_name} wonders. ]\n''')
-                break
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                #cutscene 1
+                print(f'''[ "Wowozews! Congwatuwations on defeatim dat whino, {player_name}! Awthuff I wouwd saie dat you desewve a nice, wong west, dawe's stiww a wong ways to go!" The voice in {player_name}'s head tells them. ]''')
+                print(f"[ As {player_name} waddles out of Floresta, pretty snowflakes could be seen dropping from the sky, how pretty! ]")
+                print(f'''[ "This must be... Tundra!" {player_name} wonders. ]\n''')
 
             #tundra
             enemy_encounter_check = False
-            last_played_location = "Tundra"
-            while last_played_location == "Tundra" :
-                while kippi_stats[0] >= 11 and kippi_stats[0] < 25 :
-                    if enemy_encounter_check == True:
-                        tundra_location = random.randint(1,7)
-                    else:
-                        tundra_location = random.randint(1,3)
-                        enemy_encounter_check = True
-                    if tundra_location == 1:
-                        print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
-                        print(f'[ As the never-ending snow falls from the sky, {player_name} feels like wanting to open their mouth, let their kitty tongue out and taste the snowflakes. "What would it taste like?" they wonder. ]')
-                    elif tundra_location == 2:
-                        print("    ...        *                        *       *\n      ...   *         * ..   ...                        *\n *      ...        *           *            *\n          ...               ...                          *\n            ..                            *\n    *        ..        *                       *\n           __##____              *                      *\n  *    *  /  ##  ****                   *\n         /        ****               *         *  X   *\n   *    /        ******     *                    XXX      *\n       /___________*****          *             XXXXX\n        |            ***               *       XXXXXXX   X\n    *   | ___        |                    *   XXXXXXXX  XXX\n  *     | | |   ___  | *       *             XXXXXXXXXXXXXXX\n        | |_|   | |  ****             *           X   XXXXXXX\n    *********** | | *******      *                X      X\n`````````````````````````````      ``````````````````````````\n      ^----^                /     /\n     (  ^u^ )              /     /\n     |     ||             /     /      _\n  _  | |   ||            /     /      /_〵\n  ||_!_|   |!           /     /\n  `---|  T |````````````       ``````````````````````````````\n      |  | |\n      !__!_!\n\n````````````````       ``````````````````````````````````````\n                〵     〵")
-                        print(f"[ As {player_name}'s eyes glance around, they spotted a little house in the distance! They silently prayed in their heart that the residents of that home are doing fine... and have all of their limbs intact... considering the fact that there are a lot of dangerous beasts around! ]")
-                    elif tundra_location == 3:
-                        print(" * `       *   `   *   `   *   * __  *\n         `                  `  _|==|_ ` \n  `   *       *     *           ('')___/\n `     `        `      `    >--(`^^')\n   *     *          *      `  (`^'^'`)\n``````````````````````      ```````````\n      ^----^         /     /\n     (  0o0 )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
-                        random_chance_input = input(f'[ {player_name} gasps. "A snowman!" They shout, excitedly. ]\n[ Would you like to check out the snowman? ]\n')
-                        random_chance_input = random_chance_input.lower()
-                        while random_chance_input not in yes_or_no:
-                            random_chance_input = input("[ Uh... Is that a no...? ]\n")
-                            random_chance_input = random_chance_input.lower()
-                        if random_chance_input == 'yes' :
-                            random_chance = random.randint(1,10)
-                            if random_chance == 1:
-                                print("[ The snowman... IS ALIVE!? ]")
-                                snowman_encounter()
-                            else:
-                                item = random.choice(common_items)
-                                print(f"[ {player_name} found a {item} inside of the snowman! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                                inventory.append(item)
-                        if random_chance_input == 'no' :
-                            continue
-                    elif tundra_location == 4:
-                        print(f"[ While {player_name} was walking... a PENGUIN appeared out of nowhere! ]")
-                        penguin_encounter()
-                    elif tundra_location == 5:
-                        print(f"[ While {player_name} was walking... a SEAL appeared out of nowhere! ]")
-                        seal_encounter()
-                    elif tundra_location == 6:
-                        print(f"[ While {player_name} was walking... an ARCTIC WOLF appeared out of nowhere! ]")
-                        wolf_encounter()
-                    else:
-                        print(f"[ While {player_name} was walking... a POLAR BEAR appeared out of nowhere! ]")
-                        bear_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-
-                while kippi_stats[0] == 25 :
+            
+            while kippi_stats[0] > 10 and kippi_stats[0] < 25 :
+                if enemy_encounter_check == True:
+                    tundra_location = random.randint(1,7)
+                else:
+                    tundra_location = random.randint(1,3)
+                    enemy_encounter_check = True
+                if tundra_location == 1:
+                    print("          A         `      *     *\n    *    d$b\n`      .d〵$$b.    *   `       `\n     .d$i$$〵$$b.            *    *\n   `    d$$@b         *\n*      d〵$$$ib   `           `\n     .d$$$〵$$$b        *\n ` .d$$@$$$$〵$$ib.         *   `   *\n       d$$i$$b\n   *  d〵$$$$@$b    `    *   `   *\n ` .d$@$$〵$$$$$@b.             `    *\n .d$$$$i$$$〵$$$$$$b.     *\n         ###\n         ###          *   `    *\n``````````````````````      ```````````\n      ^----^         /     /\n     (  'w' )       /     /\n     |     ||      /     /      _\n  _  | |   ||     /     /      /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
+                    print(f'[ As the never-ending snow falls from the sky, {player_name} feels like wanting to open their mouth, let their kitty tongue out and taste the snowflakes. "What would it taste like?" they wonder. ]')
+                elif tundra_location == 2:
+                    print("    ...        *                        *       *\n      ...   *         * ..   ...                        *\n *      ...        *           *            *\n          ...               ...                          *\n            ..                            *\n    *        ..        *                       *\n           __##____              *                      *\n  *    *  /  ##  ****                   *\n         /        ****               *         *  X   *\n   *    /        ******     *                    XXX      *\n       /___________*****          *             XXXXX\n        |            ***               *       XXXXXXX   X\n    *   | ___        |                    *   XXXXXXXX  XXX\n  *     | | |   ___  | *       *             XXXXXXXXXXXXXXX\n        | |_|   | |  ****             *           X   XXXXXXX\n    *********** | | *******      *                X      X\n`````````````````````````````      ``````````````````````````\n      ^----^                /     /\n     (  ^u^ )              /     /\n     |     ||             /     /      _\n  _  | |   ||            /     /      /_〵\n  ||_!_|   |!           /     /\n  `---|  T |````````````       ``````````````````````````````\n      |  | |\n      !__!_!\n\n````````````````       ``````````````````````````````````````\n                〵     〵")
+                    print(f"[ As {player_name}'s eyes glance around, they spotted a little house in the distance! They silently prayed in their heart that the residents of that home are doing fine... and have all of their limbs intact... considering the fact that there are a lot of dangerous beasts around! ]")
+                elif tundra_location == 3:
                     print(" * `       *   `   *   `   *   * __  *\n         `                  `  _|==|_ ` \n  `   *       *     *           ('')___/\n `     `        `      `    >--(`^^')\n   *     *          *      `  (`^'^'`)\n``````````````````````      ```````````\n      ^----^         /     /\n     (  0o0 )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
                     random_chance_input = input(f'[ {player_name} gasps. "A snowman!" They shout, excitedly. ]\n[ Would you like to check out the snowman? ]\n')
                     random_chance_input = random_chance_input.lower()
@@ -6179,604 +5623,840 @@ while game_state == True:
                         random_chance_input = input("[ Uh... Is that a no...? ]\n")
                         random_chance_input = random_chance_input.lower()
                     if random_chance_input == 'yes' :
-                        print(" * `       *   `   *   `   *   _ _ _  *\n         `                  ` | | |_|  ` \n  `   *       *     *     `   |_|_|_ 〵   \n `     `        `      `      (   (  /\n   *     *          *      `   |    |  *\n``````````````````````      ```````````\n      ^----^         /     /\n     (U'0o0 )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
-                        print(f" [ As {player_name} was about to head over to the silly snowman... a giant fist punctured through its snowy body!? ]")
-                        bigfoot_encounter()
+                        random_chance = random.randint(1,10)
+                        if random_chance == 1:
+                            print("[ The snowman... IS ALIVE!? ]")
+                            snowman_encounter()
+                        else:
+                            item = random.choice(common_items)
+                            print(f"[ {player_name} found a {item} inside of the snowman! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
+                            inventory.append(item)
                     if random_chance_input == 'no' :
-                        print("[ As {player_name} started to walk away from the silly snowman... a feminine figure was bestowed upon {player_name}'s eyes! ]\n")
-                        print('''                       |\n                    .*`|'*,\n       .-""-.      --- * ---      .-""-.\n     .'_.-.  |      '*,|.*`      |  .-._'.\n    /    _/ /          |         〵 〵_    〵\n   /.--.' | |                     | | '.--.〵\n  /   .-`-| |       _.---._       | |-`-.   〵\n ;.--':   | |     .'     / '.     | |   :'--.;\n|   _〵.'-| |    /      _/   〵   | |-'./_    |\n;_.-'/:   | |   /   .-'`  '.  〵  | |  :〵'-._;\n|   | _:-'〵〵.'   | ^ _ ^ |   './  /'-:_ |   |\n;  .:` '._〵.'     |   _   |     〵/ _.' `:.  ;\n|-` '-.;_ ./        '.___.'       '.` _;.-' `-|\n; / .'〵| |        _.'   '._        〵'| /'.〵;\n| .' / `'.|      .' `"---"` '.       |'` 〵'. |\n;/  /〵_/-〵     |           |       /-〵_/〵;|\n |.' .| `; 〵    | |       | |      /;` |. '.|\n |  / 〵.'〵/〵  | :--"""--: |    /`_/'./ 〵 |\n 〵| ; | ; |/)   | |       | |   (〵| : | ;|/\n  〵 | ; | //   〵.'-.....-'./    〵〵| ;| /\n   `〵 | |`/    .' / ;|: | 〵'.    |`| | /`\n     .-:_/〵_.-' .' / ' . : '. '. /`〵_:'\n     | 〵```      .'  ;    〵    `:\n     〵 〵                   '     `'.\n   .--'〵 |  '         '       .      `-._\n  /`;--' /_.'          .                  `-.\n  |  `--`        /              〵          〵\n  〵       .'   '                 '-.        |\n   〵   '               '          __〵      |\n     '.      .                 _.-'  `)     /\n       '-._                _.-' `| .-`   _.'\n           `'--....____.--'|     (`  _.-'\n                    /  | | 〵     `"`\n                   〵__/ 〵_/\n''')
-                        print('''[ "Greetings, child. I am a spirit that belongs to these snowstorms of Tundra." She smiles, almost menacingly. ]''')
-                        print('''[ She continues, saying, "My child... I normally avoid exposing my physical body towards the likes of mortals, such as thyself, but I've been seeing thou killing the innocent animals of my land. Does thou not feel an ounce of pity?" ]\n''')
-                        dialogue_options = range(1,4)
-                        for n in dialogue_options:
-                            if n == 1:
-                                print(f"{n}. [ But... I'm doim dis fow da gweatew good! ]")
-                            if n == 2:
-                                print(f"{n}. [ Dose animaws desewved it! Dey'we goim cwazy! ]")
-                            if n == 3:
-                                print(f"{n}. [ I'm twyim to defend mysewf! Haven't you've seen howo daie wewe acting? ]\n")
+                        continue
+                elif tundra_location == 4:
+                    print(f"[ While {player_name} was walking... a PENGUIN appeared out of nowhere! ]")
+                    penguin_encounter()
+                elif tundra_location == 5:
+                    print(f"[ While {player_name} was walking... a SEAL appeared out of nowhere! ]")
+                    seal_encounter()
+                elif tundra_location == 6:
+                    print(f"[ While {player_name} was walking... an ARCTIC WOLF appeared out of nowhere! ]")
+                    wolf_encounter()
+                else:
+                    print(f"[ While {player_name} was walking... a POLAR BEAR appeared out of nowhere! ]")
+                    bear_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+
+            while kippi_stats[0] == 25 :
+                print(" * `       *   `   *   `   *   * __  *\n         `                  `  _|==|_ ` \n  `   *       *     *           ('')___/\n `     `        `      `    >--(`^^')\n   *     *          *      `  (`^'^'`)\n``````````````````````      ```````````\n      ^----^         /     /\n     (  0o0 )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
+                random_chance_input = input(f'[ {player_name} gasps. "A snowman!" They shout, excitedly. ]\n[ Would you like to check out the snowman? ]\n')
+                random_chance_input = random_chance_input.lower()
+                while random_chance_input not in yes_or_no:
+                    random_chance_input = input("[ Uh... Is that a no...? ]\n")
+                    random_chance_input = random_chance_input.lower()
+                if random_chance_input == 'yes' :
+                    print(" * `       *   `   *   `   *   _ _ _  *\n         `                  ` | | |_|  ` \n  `   *       *     *     `   |_|_|_ 〵   \n `     `        `      `      (   (  /\n   *     *          *      `   |    |  *\n``````````````````````      ```````````\n      ^----^         /     /\n     (U'0o0 )       /     /\n     |     ||      /     /   _\n  _  | |   ||     /     /   /_〵\n  ||_!_|   |!    /     /\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n                〵     〵")
+                    print(f"[ As {player_name} was about to head over to the silly snowman... a giant fist punctured through its snowy body!? ]")
+                    bigfoot_encounter()
+                if random_chance_input == 'no' :
+                    print("[ As {player_name} started to walk away from the silly snowman... a feminine figure was bestowed upon {player_name}'s eyes! ]\n")
+                    print('''                       |\n                    .*`|'*,\n       .-""-.      --- * ---      .-""-.\n     .'_.-.  |      '*,|.*`      |  .-._'.\n    /    _/ /          |         〵 〵_    〵\n   /.--.' | |                     | | '.--.〵\n  /   .-`-| |       _.---._       | |-`-.   〵\n ;.--':   | |     .'     / '.     | |   :'--.;\n|   _〵.'-| |    /      _/   〵   | |-'./_    |\n;_.-'/:   | |   /   .-'`  '.  〵  | |  :〵'-._;\n|   | _:-'〵〵.'   | ^ _ ^ |   './  /'-:_ |   |\n;  .:` '._〵.'     |   _   |     〵/ _.' `:.  ;\n|-` '-.;_ ./        '.___.'       '.` _;.-' `-|\n; / .'〵| |        _.'   '._        〵'| /'.〵;\n| .' / `'.|      .' `"---"` '.       |'` 〵'. |\n;/  /〵_/-〵     |           |       /-〵_/〵;|\n |.' .| `; 〵    | |       | |      /;` |. '.|\n |  / 〵.'〵/〵  | :--"""--: |    /`_/'./ 〵 |\n 〵| ; | ; |/)   | |       | |   (〵| : | ;|/\n  〵 | ; | //   〵.'-.....-'./    〵〵| ;| /\n   `〵 | |`/    .' / ;|: | 〵'.    |`| | /`\n     .-:_/〵_.-' .' / ' . : '. '. /`〵_:'\n     | 〵```      .'  ;    〵    `:\n     〵 〵                   '     `'.\n   .--'〵 |  '         '       .      `-._\n  /`;--' /_.'          .                  `-.\n  |  `--`        /              〵          〵\n  〵       .'   '                 '-.        |\n   〵   '               '          __〵      |\n     '.      .                 _.-'  `)     /\n       '-._                _.-' `| .-`   _.'\n           `'--....____.--'|     (`  _.-'\n                    /  | | 〵     `"`\n                   〵__/ 〵_/\n''')
+                    print('''[ "Greetings, child. I am a spirit that belongs to these snowstorms of Tundra." She smiles, almost menacingly. ]''')
+                    print('''[ She continues, saying, "My child... I normally avoid exposing my physical body towards the likes of mortals, such as thyself, but I've been seeing thou killing the innocent animals of my land. Does thou not feel an ounce of pity?" ]\n''')
+                    dialogue_options = range(1,4)
+                    for n in dialogue_options:
+                        if n == 1:
+                            print(f"{n}. [ But... I'm doim dis fow da gweatew good! ]")
+                        if n == 2:
+                            print(f"{n}. [ Dose animaws desewved it! Dey'we goim cwazy! ]")
+                        if n == 3:
+                            print(f"{n}. [ I'm twyim to defend mysewf! Haven't you've seen howo daie wewe acting? ]\n")
+                    dialogue_choice = input("[ What would you like to say to her? ]\n")
+                    while dialogue_choice not in map(str, dialogue_options):
+                        print("[ The spirit tilts her head to the side, not understanding what you were trying to articulate. ]")
                         dialogue_choice = input("[ What would you like to say to her? ]\n")
-                        while dialogue_choice not in map(str, dialogue_options):
-                            print("[ The spirit tilts her head to the side, not understanding what you were trying to articulate. ]")
-                            dialogue_choice = input("[ What would you like to say to her? ]\n")
-                        print('''                       |\n                    .*`|'*,\n       .-""-.      --- * ---      .-""-.\n     .'_.-.  |      '*,|.*`      |  .-._'.\n    /    _/ /          |         〵 〵_    〵\n   /.--.' | |                     | | '.--.〵\n  /   .-`-| |       _.---._       | |-`-.   〵\n ;.--':   | |     .'     / '.     | |   :'--.;\n|   _〵.'-| |    /      _/   〵   | |-'./_    |\n;_.-'/:   | |   /   .-'`  '.  〵  | |  :〵'-._;\n|   | _:-'〵〵.'   | ò _ ó |   './  /'-:_ |   |\n;  .:` '._〵.'     |   .   |     〵/ _.' `:.  ;\n|-` '-.;_ ./        '.___.'       '.` _;.-' `-|\n; / .'〵| |        _.'   '._        〵'| /'.〵;\n| .' / `'.|      .' `"---"` '.       |'` 〵'. |\n;/  /〵_/-〵     |           |       /-〵_/〵;|\n |.' .| `; 〵    | |       | |      /;` |. '.|\n |  / 〵.'〵/〵  | :--"""--: |    /`_/'./ 〵 |\n 〵| ; | ; |/)   | |       | |   (〵| : | ;|/\n  〵 | ; | //   〵.'-.....-'./    〵〵| ;| /\n   `〵 | |`/    .' / ;|: | 〵'.    |`| | /`\n     .-:_/〵_.-' .' / ' . : '. '. /`〵_:'\n     | 〵```      .'  ;    〵    `:\n     〵 〵                   '     `'.\n   .--'〵 |  '         '       .      `-._\n  /`;--' /_.'          .                  `-.\n  |  `--`        /              〵          〵\n  〵       .'   '                 '-.        |\n   〵   '               '          __〵      |\n     '.      .                 _.-'  `)     /\n       '-._                _.-' `| .-`   _.'\n           `'--....____.--'|     (`  _.-'\n                    /  | | 〵     `"`\n                   〵__/ 〵_/''')
-                        print('''[ She furrowed her eyebrows. "Regardless of what thy disgusting cat tongue might decide to spit out, I shall not take these horrible actions no longer!" ]''')
-                        print('''[ {player_name} could feel large gusts of cold wind and piles of snow spiralling around them. It looks like some kind of performance! But... "Ergo, I shall take thy life... just like how thou have taken the lives of the other animals of my land!" The spirit sputtered out." ]''')
-                        spirit_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                    print('''                       |\n                    .*`|'*,\n       .-""-.      --- * ---      .-""-.\n     .'_.-.  |      '*,|.*`      |  .-._'.\n    /    _/ /          |         〵 〵_    〵\n   /.--.' | |                     | | '.--.〵\n  /   .-`-| |       _.---._       | |-`-.   〵\n ;.--':   | |     .'     / '.     | |   :'--.;\n|   _〵.'-| |    /      _/   〵   | |-'./_    |\n;_.-'/:   | |   /   .-'`  '.  〵  | |  :〵'-._;\n|   | _:-'〵〵.'   | ò _ ó |   './  /'-:_ |   |\n;  .:` '._〵.'     |   .   |     〵/ _.' `:.  ;\n|-` '-.;_ ./        '.___.'       '.` _;.-' `-|\n; / .'〵| |        _.'   '._        〵'| /'.〵;\n| .' / `'.|      .' `"---"` '.       |'` 〵'. |\n;/  /〵_/-〵     |           |       /-〵_/〵;|\n |.' .| `; 〵    | |       | |      /;` |. '.|\n |  / 〵.'〵/〵  | :--"""--: |    /`_/'./ 〵 |\n 〵| ; | ; |/)   | |       | |   (〵| : | ;|/\n  〵 | ; | //   〵.'-.....-'./    〵〵| ;| /\n   `〵 | |`/    .' / ;|: | 〵'.    |`| | /`\n     .-:_/〵_.-' .' / ' . : '. '. /`〵_:'\n     | 〵```      .'  ;    〵    `:\n     〵 〵                   '     `'.\n   .--'〵 |  '         '       .      `-._\n  /`;--' /_.'          .                  `-.\n  |  `--`        /              〵          〵\n  〵       .'   '                 '-.        |\n   〵   '               '          __〵      |\n     '.      .                 _.-'  `)     /\n       '-._                _.-' `| .-`   _.'\n           `'--....____.--'|     (`  _.-'\n                    /  | | 〵     `"`\n                   〵__/ 〵_/''')
+                    print('''[ She furrowed her eyebrows. "Regardless of what thy disgusting cat tongue might decide to spit out, I shall not take these horrible actions no longer!" ]''')
+                    print('''[ {player_name} could feel large gusts of cold wind and piles of snow spiralling around them. It looks like some kind of performance! But... "Ergo, I shall take thy life... just like how thou have taken the lives of the other animals of my land!" The spirit sputtered out." ]''')
+                    spirit_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    #cutscene 2
-                    if random_chance_input == 'yes':
-                        print("[ As Bigfoot slumps over in defeat, you hear him once again... ]")
-                        print(f'''[ "Gweat job, {player_name}! To be honest, I was pwettie scawed dat you wewe goim to tuwn into a fewine pancake! I mean, it was twice as big as you!" The wizard says, telepathically. Where even is he? ]''')
-                        print(f"[ {player_name} shrugs, not knowing what to answer. ]\n")
-                        print('''[ "Weww dan, next up, Sahawa!" He orders, casually. ]''')
-                    if random_chance_input == 'no':
-                        print("[ The light eminating from the spirit's body started to dim, and the look on her face started to look more and more worn out. ]")
-                        print('''[ "T-Thou...!" She sputters. She puts up her wings, signalling that she'll take off. "I'll get you next time, you scoundrel!" ]\n''')
-                        print(f'''[ {player_name} hears... clapping? "Haw-haw-haw! Weww done, weww done!" The wizard exclaims. ]''')
-                        print(f"[ {player_name} blushes a little. But this isn't a time where {player_name} should just be standing around and be praised by someone! {player_name} has a quest to fulfill! ]")
-                        print(f'''[ The Wizard of Paws barges inside {player_name}'s mental chamber. "Nowo, nowo, head ovew to Sahawa, wiww ya?" ]\n''')
-                    print(f"[ {player_name}'s nose scrunches as soon as they heard that place's name. ]")
-                    print('''[ "Sahara... THE DESERT!?" They anguished, mentally. ]''')
-                break
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                #cutscene 2
+                if random_chance_input == 'yes':
+                    print("[ As Bigfoot slumps over in defeat, you hear him once again... ]")
+                    print(f'''[ "Gweat job, {player_name}! To be honest, I was pwettie scawed dat you wewe goim to tuwn into a fewine pancake! I mean, it was twice as big as you!" The wizard says, telepathically. Where even is he? ]''')
+                    print(f"[ {player_name} shrugs, not knowing what to answer. ]\n")
+                    print('''[ "Weww dan, next up, Sahawa!" He orders, casually. ]''')
+                if random_chance_input == 'no':
+                    print("[ The light eminating from the spirit's body started to dim, and the look on her face started to look more and more worn out. ]")
+                    print('''[ "T-Thou...!" She sputters. She puts up her wings, signalling that she'll take off. "I'll get you next time, you scoundrel!" ]\n''')
+                    print(f'''[ {player_name} hears... clapping? "Haw-haw-haw! Weww done, weww done!" The wizard exclaims. ]''')
+                    print(f"[ {player_name} blushes a little. But this isn't a time where {player_name} should just be standing around and be praised by someone! {player_name} has a quest to fulfill! ]")
+                    print(f'''[ The Wizard of Paws barges inside {player_name}'s mental chamber. "Nowo, nowo, head ovew to Sahawa, wiww ya?" ]\n''')
+                print(f"[ {player_name}'s nose scrunches as soon as they heard that place's name. ]")
+                print('''[ "Sahara... THE DESERT!?" They anguished, mentally. ]''')
 
             #sahara
             enemy_encounter_check = False
-            last_played_location = "Sahara"
-            while last_played_location == "Sahara":
-                while kippi_stats[0] >= 26 and kippi_stats[0] < 50 :
-                    if enemy_encounter_check == True:
-                        sahara_location = random.randint(1,8)
-                    else:
-                        sahara_location = random.randint(1,3)
-                        enemy_encounter_check = True
-                    if sahara_location == 1:
-                        print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n\n     .*.       .*.\n   , | | ,     | |\n  ||_| |_||  , | | ,\n  `--, ,--` ||_| |_||\n     | |    `--, ,--`\n     | |       | |\n     | |       | |                 _\n```````````````| |````      ``````/_〵``\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                        print(f"[ As {player_name} walks further, it seems like it's just neverending stretches of sands and cactuses around them... ]")
-                    elif sahara_location == 2:
-                        print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                        print(f'''[ "Dis pwace seems... awfuwwie quiet." {player_name} thought to themselves. They keep looking behind themselves because they're afraid of being jumped on by a scary beast! ]''')
-                    elif sahara_location == 3:
-                        print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                %%%,%%%%%%%\n                             ,'%% 〵〵-*%%%%%%%\n                       ;%%%%%*%   _%%%%'\n                        ,%%%       〵(_.*%%%%.\n                        % *%%, ,%%%%*(    '\n                      %^     ,*%%% )〵|,%%*%,_\n                           *%    〵/ #).-'*%%*\n                               _.) ,/ *%,\n                                /)#(\n``````````````````````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                        random_chance_input = input(f'''[ "Oh, wook! A twee!" {player_name} exclaims. The heat is getting unbearably hot! ]\n[ Would you like to try sitting under the shady tree? ]\n''')
-                        random_chance_input = random_chance_input.lower()
-                        while random_chance_input not in yes_or_no:
-                            random_chance_input = input("[ Uh... Is that a no...? ]\n")
-                            random_chance_input = random_chance_input.lower()
-                        if random_chance_input == 'yes' :
-                            random_chance = random.randint(1,6)
-                            if random_chance == 1:
-                                print(f"[ While {player_name} was about to take a little rest, a LIZARD appeared out of nowhere! ]")
-                                lizard_encounter()
-                            elif random_chance == 2:
-                                print(f"[ While {player_name} was about to take a little rest, a SNAKE appeared out of nowhere! ]")
-                                snake_encounter()
-                            elif random_chance == 3:
-                                print(f"[ While {player_name} was about to take a little rest, an OSTRITCH appeared out of nowhere! ]")
-                                ostritch_encounter()
-                            elif random_chance == 4:
-                                print(f"[ While {player_name} was about to take a little rest, a COYOTE appeared out of nowhere! ]")
-                                coyote_encounter()
-                            elif random_chance == 5:
-                                print(f"[ While {player_name} was about to take a little rest, a TORTOISE appeared out of nowhere! ]")
-                                tortoise_encounter()
-                            else:
-                                item = random.choice(uncommon_items)
-                                print(f"[ {player_name} found a {item} under the tree! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                                inventory.append(item)
-                        if random_chance_input == 'no' :
-                            continue
-                    elif sahara_location == 4:
-                        print(f"[ While {player_name} was walking... a LIZARD appeared out of nowhere! ]")
-                        lizard_encounter()
-                    elif sahara_location == 5:
-                        print(f"[ While {player_name} was walking... a SNAKE appeared out of nowhere! ]")
-                        snake_encounter()
-                    elif sahara_location == 6:
-                        print(f"[ While {player_name} was walking... an OSTRITCH appeared out of nowhere! ]")
-                        ostritch_encounter()
-                    elif sahara_location == 7:
-                        print(f"[ While {player_name} was walking... a COYOTE appeared out of nowhere! ]")
-                        coyote_encounter()
-                    else:
-                        print(f"[ While {player_name} was walking... a TORTOISE appeared out of nowhere! ]")
-                        tortoise_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
 
-                while kippi_stats[0] == 50 :
-                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '                      _*_\n                              (|||)\n                              |||||\n                          __  |||||\n                         (||) |||||\n                         |||| |||||  __\n                         |||| ||||| (||)\n                         |||| ||||| ||||\n                         〵|`-'|||| ||||\n                          〵__ |||| ||||\n                              ||||`-'|||\n                              |||| ___/\n                              |||||\n                              |||||\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+            while kippi_stats[0] > 25 and kippi_stats[0] < 50 :
+                if enemy_encounter_check == True:
+                    sahara_location = random.randint(1,8)
+                else:
+                    sahara_location = random.randint(1,3)
+                    enemy_encounter_check = True
+                if sahara_location == 1:
+                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n\n     .*.       .*.\n   , | | ,     | |\n  ||_| |_||  , | | ,\n  `--, ,--` ||_| |_||\n     | |    `--, ,--`\n     | |       | |\n     | |       | |                 _\n```````````````| |````      ``````/_〵``\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                    print(f"[ As {player_name} walks further, it seems like it's just neverending stretches of sands and cactuses around them... ]")
+                elif sahara_location == 2:
+                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
                     print(f'''[ "Dis pwace seems... awfuwwie quiet." {player_name} thought to themselves. They keep looking behind themselves because they're afraid of being jumped on by a scary beast! ]''')
-                    direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ]\n")
-                    direction_choice = direction_choice.lower()
-                    while 'inventory' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
-                            direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
-                            direction_choice = direction_choice.lower()
-                    if 'inventory' in direction_choice:
-                        inventory_check()
-                    elif 'left' in direction_choice:
-                        print(f"[ As {player_name} started to walk in the direction of the... unusually large cactus, they suddenly felt the ground rumbling. As they tried to run away to save themselves from being a victim of a natural disaster, large pillars of sand surrounded them! Turning their head back, they saw that the unassuming cactus... has become a COLOSSAL CACTUS! ]")
-                        print('''[ "Well, well, well, lil' feller!" The cactus boomed. "Been seein' ya attackin' mah people left and right. Don't really appreciate that much! Guess I gotta kill ya now." He shrugs. ]''')
-                        cactus_encounter()
-                    elif 'right' or 'forward' in direction_choice:
-                        print(f"[ As {player_name} was walking, they suddenly bumped into a... another kitfolk!? In this area!? ]")
-                        traveller_emotes('happy')
-                        print(f'''[ "Oh, heie dawe! Suwpwised to see anodaw kitfowk awound dase pawts." The hat-wearing kitfolk says to {player_name}. ]''')
-                        if head[0] == 'SUNGLASSES' :
-                            print(f'''[ He looks up and down at {player_name} for a moment. "And dose awe some coow shades you've got!... Y'knowo what, I kinda wike you! Hewe—" ]''')
-                            print(f"[ The strange kitfolk hands you a... RUMBLESTRIKE HAMMER!? ]")
-                            inventory.append('RUMBLESTRIKE HAMMER')
-                            traveller_emotes('happier')
-                            print(f'''[ He waves his paw at you, grinning. "Somethim dat'ww pwobabwie make youw twavewwim easiew. Have a nice day!" It looked like he was about to leave for a second, but he stopped in his tracks. He looks at {player_name}, one last time, and says "Oh, and just an advice fow a kitfowk fwom a kitfowk, don't bewieve da wowds of peopwe whom you just met, m'kay?" ]''')
-                            print(f"[ As {player_name} was about to thank him for his kindness... he suddenly vanished! Like the wind... ]")
+                elif sahara_location == 3:
+                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                %%%,%%%%%%%\n                             ,'%% 〵〵-*%%%%%%%\n                       ;%%%%%*%   _%%%%'\n                        ,%%%       〵(_.*%%%%.\n                        % *%%, ,%%%%*(    '\n                      %^     ,*%%% )〵|,%%*%,_\n                           *%    〵/ #).-'*%%*\n                               _.) ,/ *%,\n                                /)#(\n``````````````````````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                    random_chance_input = input(f'''[ "Oh, wook! A twee!" {player_name} exclaims. The heat is getting unbearably hot! ]\n[ Would you like to try sitting under the shady tree? ]\n''')
+                    random_chance_input = random_chance_input.lower()
+                    while random_chance_input not in yes_or_no:
+                        random_chance_input = input("[ Uh... Is that a no...? ]\n")
+                        random_chance_input = random_chance_input.lower()
+                    if random_chance_input == 'yes' :
+                        random_chance = random.randint(1,6)
+                        if random_chance == 1:
+                            print(f"[ While {player_name} was about to take a little rest, a LIZARD appeared out of nowhere! ]")
+                            lizard_encounter()
+                        elif random_chance == 2:
+                            print(f"[ While {player_name} was about to take a little rest, a SNAKE appeared out of nowhere! ]")
+                            snake_encounter()
+                        elif random_chance == 3:
+                            print(f"[ While {player_name} was about to take a little rest, an OSTRITCH appeared out of nowhere! ]")
+                            ostritch_encounter()
+                        elif random_chance == 4:
+                            print(f"[ While {player_name} was about to take a little rest, a COYOTE appeared out of nowhere! ]")
+                            coyote_encounter()
+                        elif random_chance == 5:
+                            print(f"[ While {player_name} was about to take a little rest, a TORTOISE appeared out of nowhere! ]")
+                            tortoise_encounter()
                         else:
-                            print(f'''[ "Hey, you don't mind if I tawk about awmadiwwos to you, wight? I wove awmadiwwos!" He says, rather enthusiastically. ]\n''')
-                            dialogue_options = range(1,3)
-                            for n in dialogue_options:
-                                if n == 1:
-                                    print(f"{n}. [ Uh... Suwe! ]")
-                                if n == 2:
-                                    print(f"{n}. [ No. I'm busie. ]\n")
-                            dialogue_choice = input("[ What would you like to say to him? ]\n")
-                            while dialogue_choice not in map(str, dialogue_options):
-                                print('''[ "Uh... Guess we'we fwom diffewent pawts of nyuwuwoviwwa, huh? 'Cause I can't seem to undewstand you..." ]''')
-                                dialogue_choice = input("[ What would you like to say to him? ]\n")
-                            if dialogue_choice == '1' :
-                                traveller_emotes('happier')
-                                print(f'''[ "Fantastic!" He clears his throat before unleashing an ungodly amount of armadillo facts to {player_name}— ]''')
-                                armadillo_facts_moment(1)
-                            else:
-                                pass
-                            traveller_emotes('angry')
-                            print('[ The overly-talkative traveller suddenly goes quiet... ]')
-                            traveller_emotes('angrier')
-                            print('''[ "Y'knowo, I awweadie knew you wewen't actuawwie wistenim to what I was sayim... but just outwight ignowim me is extwemewie wude!" He sputters. ]''')
-                            print('''[ Although you tried your best to calm him down and tried to clarify that you were— mostly— listening to whatever he was saying, he screeches "IF YOU HATED LISTENIM TO WHAT I WAS SAYIM SO MUCH, YOU SHOULD'VE JUST WALKED AWAY!" ]''')
-                            traveller_emotes('angriest')
-                            print('''[ The traveller clapped both of his paws together, and shouted "JEREMY～!" Thinking this was one of his silly antics again, {player_name} giggled a little. Suddenly, the ground started to shake, and a big hole started to form in front of you! Running away before you could be consumed by it, you turned your back towards the strange phenomenon ocurring before your eyes, and there— comes out a BROBDINGNAGIAN ARMADILLO!? ]\n''')
-                            armadillo_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                            item = random.choice(uncommon_items)
+                            print(f"[ {player_name} found a {item} under the tree! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
+                            inventory.append(item)
+                    if random_chance_input == 'no' :
+                        continue
+                elif sahara_location == 4:
+                    print(f"[ While {player_name} was walking... a LIZARD appeared out of nowhere! ]")
+                    lizard_encounter()
+                elif sahara_location == 5:
+                    print(f"[ While {player_name} was walking... a SNAKE appeared out of nowhere! ]")
+                    snake_encounter()
+                elif sahara_location == 6:
+                    print(f"[ While {player_name} was walking... an OSTRITCH appeared out of nowhere! ]")
+                    ostritch_encounter()
+                elif sahara_location == 7:
+                    print(f"[ While {player_name} was walking... a COYOTE appeared out of nowhere! ]")
+                    coyote_encounter()
+                else:
+                    print(f"[ While {player_name} was walking... a TORTOISE appeared out of nowhere! ]")
+                    tortoise_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
                         game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
 
-                #still sahara
-                enemy_encounter_check = False
-
-                while kippi_stats[0] >= 51 and kippi_stats[0] < 75 :
-                    if enemy_encounter_check == True:
-                        sahara_location = random.randint(1,8)
+            while kippi_stats[0] == 50 :
+                print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '                      _*_\n                              (|||)\n                              |||||\n                          __  |||||\n                         (||) |||||\n                         |||| |||||  __\n                         |||| ||||| (||)\n                         |||| ||||| ||||\n                         〵|`-'|||| ||||\n                          〵__ |||| ||||\n                              ||||`-'|||\n                              |||| ___/\n                              |||||\n                              |||||\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                print(f'''[ "Dis pwace seems... awfuwwie quiet." {player_name} thought to themselves. They keep looking behind themselves because they're afraid of being jumped on by a scary beast! ]''')
+                direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ]\n")
+                direction_choice = direction_choice.lower()
+                while 'inventory' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
+                        direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
+                        direction_choice = direction_choice.lower()
+                if 'inventory' in direction_choice:
+                    inventory_check()
+                elif 'left' in direction_choice:
+                    print(f"[ As {player_name} started to walk in the direction of the... unusually large cactus, they suddenly felt the ground rumbling. As they tried to run away to save themselves from being a victim of a natural disaster, large pillars of sand surrounded them! Turning their head back, they saw that the unassuming cactus... has become a COLOSSAL CACTUS! ]")
+                    print('''[ "Well, well, well, lil' feller!" The cactus boomed. "Been seein' ya attackin' mah people left and right. Don't really appreciate that much! Guess I gotta kill ya now." He shrugs. ]''')
+                    cactus_encounter()
+                elif 'right' or 'forward' in direction_choice:
+                    print(f"[ As {player_name} was walking, they suddenly bumped into a... another kitfolk!? In this area!? ]")
+                    traveller_emotes('happy')
+                    print(f'''[ "Oh, heie dawe! Suwpwised to see anodaw kitfowk awound dase pawts." The hat-wearing kitfolk says to {player_name}. ]''')
+                    if head[0] == 'SUNGLASSES' :
+                        print(f'''[ He looks up and down at {player_name} for a moment. "And dose awe some coow shades you've got!... Y'knowo what, I kinda wike you! Hewe—" ]''')
+                        print(f"[ The strange kitfolk hands you a... RUMBLESTRIKE HAMMER!? ]")
+                        inventory.append('RUMBLESTRIKE HAMMER')
+                        traveller_emotes('happier')
+                        print(f'''[ He waves his paw at you, grinning. "Somethim dat'ww pwobabwie make youw twavewwim easiew. Have a nice day!" It looked like he was about to leave for a second, but he stopped in his tracks. He looks at {player_name}, one last time, and says "Oh, and just an advice fow a kitfowk fwom a kitfowk, don't bewieve da wowds of peopwe whom you just met, m'kay?" ]''')
+                        print(f"[ As {player_name} was about to thank him for his kindness... he suddenly vanished! Like the wind... ]")
                     else:
-                        sahara_location = random.randint(1,3)
-                        enemy_encounter_check = True
-                    if sahara_location == 1:
-                        print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n\n     .*.       .*.\n   , | | ,     | |\n  ||_| |_||  , | | ,\n  `--, ,--` ||_| |_||\n     | |    `--, ,--`\n     | |       | |\n     | |       | |                 _\n```````````````| |````      ``````/_〵``\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                        print(f"[ As {player_name} walks further, it seems like it's just neverending stretches of sands and cactuses around them... ]")
-                    elif sahara_location == 2:
-                        print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                        print(f'''[ "Dis pwace seems... awfuwwie quiet." {player_name} thought to themselves. They keep looking behind themselves because they're afraid of being jumped on by a scary beast! ]''')
-                    elif sahara_location == 3:
-                        print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                %%%,%%%%%%%\n                             ,'%% 〵〵-*%%%%%%%\n                       ;%%%%%*%   _%%%%'\n                        ,%%%       〵(_.*%%%%.\n                        % *%%, ,%%%%*(    '\n                      %^     ,*%%% )〵|,%%*%,_\n                           *%    〵/ #).-'*%%*\n                               _.) ,/ *%,\n                                /)#(\n``````````````````````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                        random_chance_input = input(f'''[ "Oh, wook! A twee!" {player_name} exclaims. The heat is getting unbearably hot! ]\n[ Would you like to try sitting under the shady tree? ]\n''')
-                        random_chance_input = random_chance_input.lower()
-                        while random_chance_input not in yes_or_no:
-                            random_chance_input = input("[ Uh... Is that a no...? ]\n")
-                            random_chance_input = random_chance_input.lower()
-                        if random_chance_input == 'yes' :
-                            random_chance = random.randint(1,6)
-                            if random_chance == 1:
-                                print(f"[ While {player_name} was about to take a little rest, a LIZARD appeared out of nowhere! ]")
-                                lizard_encounter()
-                            elif random_chance == 2:
-                                print(f"[ While {player_name} was about to take a little rest, a SNAKE appeared out of nowhere! ]")
-                                snake_encounter()
-                            elif random_chance == 3:
-                                print(f"[ While {player_name} was about to take a little rest, an OSTRITCH appeared out of nowhere! ]")
-                                ostritch_encounter()
-                            elif random_chance == 4:
-                                print(f"[ While {player_name} was about to take a little rest, a COYOTE appeared out of nowhere! ]")
-                                coyote_encounter()
-                            elif random_chance == 5:
-                                print(f"[ While {player_name} was about to take a little rest, a TORTOISE appeared out of nowhere! ]")
-                                tortoise_encounter()
-                            else:
-                                item = random.choice(uncommon_items)
-                                print(f"[ {player_name} found a {item} under the tree! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                                inventory.append(item)
-                        if random_chance_input == 'no' :
-                            continue
-                    elif sahara_location == 4:
-                        print(f"[ While {player_name} was walking... a LIZARD appeared out of nowhere! ]")
-                        lizard_encounter()
-                    elif sahara_location == 5:
-                        print(f"[ While {player_name} was walking... a SNAKE appeared out of nowhere! ]")
-                        snake_encounter()
-                    elif sahara_location == 6:
-                        print(f"[ While {player_name} was walking... an OSTRITCH appeared out of nowhere! ]")
-                        ostritch_encounter()
-                    elif sahara_location == 7:
-                        print(f"[ While {player_name} was walking... a COYOTE appeared out of nowhere! ]")
-                        coyote_encounter()
-                    else:
-                        print(f"[ While {player_name} was walking... a TORTOISE appeared out of nowhere! ]")
-                        tortoise_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-
-                while kippi_stats[0] == 75 :
-                    print(f'''[ "Gosh, I'm so diwsty!" {player_name} thought to themselves. ]''')
-                    print(f"[ While {player_name} was fantisizing about how amazing it could be if {player_name} could drink from, or even bathe in a cold, refreshing oasis... The grounds of Sahara started to crack, pulling {player_name} away from their thoughts! ]")
-                    print("     .*.       .*.\n   , | | ,     | |\n  ||_| |_||  , | | ,\n  `--, ,--` ||_| |_||\n     | |    `--, ,--`\n     | |       | |\n     | |       | |                 _\n```````````````| |````      ``````/_〵``\n``````^----^`````````/     /```````````\n`````(U'ó.ò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````    |  ````````````````\n      |  | |     〵___〵_`__._`___`__/_\n      !__!_!        __`__/〵`__  〵\n                   /           〵\n````````````````       ````````````````\n````````````````〵     〵``````````````")
-                    print(f'''[ "W-What is goim on!?" {player_name} shouted. Almost answering their question, a gigantic dinosaur erupted from the cracks; leaving debris of sand everywhere, even on {player_name}'s fur! ]''')
-                    print(f'''[ "Didn't dinosauws went extinct 5000 yeaws ago!? Gwah! Nowo I have to fight one!" {player_name} screamed at themselves, mentally. ]''')
-                    behemoth_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    #cutscene 3
-                    print(f'''[ "Woah!" The wizard's voice in {player_name} brain echoes. "Not to be wude, but wowo! I didn't expect dat you'd defeat dat monstew! I mean, it was ten feet tawwew dan you!" Although {player_name} couldn't see the wizard, they could tell that he was scoffing. ]''')
-                    print(f'''[ "I knew it wasn't a mistake choosim you as mie mentee!" He praises. {player_name} could feel their self-esteem rising hearing those words from a world-renowned wizard! ]\n''')
-                    print('''[ "Nowo, da next and finaw chawwenge might be a wittwe too tuff fow you..." The wizard warns. "Because we'we about to head ovew to..." ]''')
-                    print('''                        (   (( . : (    .)   ) :  )\n                          (   ( :  .  :    :  )  ))\n                           ( ( ( (  .  :  . . ) )\n                            ( ( : :  :  )   )  )\n                             ( :(   .   .  ) .'\n                              '. :(   :    )\n                                (   :  . )  )\n                                 ')   :   #@##\n                                #',### " #@  #@\n                               #/ @'#~@#~/〵  #\n                             ##  @@# @##@  `..@,\n                           @#/  #@#   _##     `〵\n                         @##;  `#~._.' ##@      〵.\n                       .-#/           @#@#@--,_,--〵\n                      / `@#@..,     .~###'         `~.\n                    _/         `-.-' #@####@          〵\n                 __/     &^^       ^#^##~##&&&   %     〵.\n                /       && ^^      @#^##@#%%#@&&&&  ^    〵\n              ~/         &&&    ^^^   ^^   &&&  %%% ^^^   `~._\n           .-'   ^^    %%%. &&   ___^     &&   && &&   ^^     〵\n          /akg ^^^ ___&&& X & && |n|   ^ ___ %____&& . ^^^^^   `~.\n                   |M|       ---- .  ___.|n| /〵___〵  X\n                             |mm| X  |n|X    ||____|''')
-                    print('''[ "VOLCANA, DA PLACE WHERE ZEALOUS IS RESIDING!" The wizard says, perhaps a litte too entusiastically. ]\n''')
-                    print(f'''[ "...Wait, I'm gonna fight Zeawous!?" A thought just crossed {player_name}'s mind. ]''')
-                    print(f"[ Just as {player_name} was about to ask for clarification whether they will or will not be defeating a huge dragon— twenty times the size as a regular kitfolk, like themselves, the wizard, of course, doesn't respond to their inquiries. ]")
-                    print(f'''[ "That wizawd bettew tweat me to a nice, fishie dinnew aftew dis!" {player_name} internally cursed to themselves. ]''')
-                break
-
-            #volcana
-            enemy_encounter_check = False
-            last_played_location = "Volcana"
-            while last_played_location == "Volcana":
-                while kippi_stats[0] >= 76 and kippi_stats[0] < 100 :
-                    if enemy_encounter_check == True:
-                        volcana_location = random.randint(1,7)
-                    else:
-                        volcana_location = random.randint(1,3)
-                        enemy_encounter_check = True
-                    if volcana_location == 1:
-                        print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n                    _ --        -_ =-_\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'ó-ò )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
-                        print(f'''[ "This pwace is... swewtewimwie hot!" {player_name} mutters to themselves. They feel like they could melt into a puddle at any moment! ]''')
-                    elif volcana_location == 2:
-                        print("  `:--._      _.---.\n    :--:〵   .:`--.' _ _   --__     -_\n     :/ (〵^.` `./\n--__  ``〵/-==:'`     - -__     -_\n         |.--    --___     _ __--__  _\n_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n                    _ --        -_ =-_\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'O.O )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
-                        print(f"[ {player_name} ears perk up suddenly as they hear something... or someone— roaring in the distance! ]")
-                    elif volcana_location == 3:
-                        print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'ó,ò )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
-                        random_chance_input = input(f"[ Oh, look! It's a... skull... ]\n[ Would you like to check out what's inside of it... for some reason? ]\n")
-                        random_chance_input = random_chance_input.lower()
-                        while random_chance_input not in yes_or_no:
-                            random_chance_input = input("[ Uh... Is that a no...? ]\n")
-                            random_chance_input = random_chance_input.lower()
-                        if random_chance_input == 'yes' :
-                            random_chance = random.randint(1,5)
-                            if random_chance == 1:
-                                print(f"[ Uh, oh! Turns out the skull... was actually a SKELETON THAT'S ALIVE!? ]")
-                                skeleton_encounter()
-                            else:
-                                item = random.choice(uncommon_items)
-                                print(f"[ {player_name} found a {item} in the... skull! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
-                                inventory.append(item)
-                        if random_chance_input == 'no' :
-                            continue
-                    elif volcana_location == 4:
-                        print(f"[ While {player_name} was walking... an UNASSUMING BLOB OF LAVA appeared out of nowhere! ]")
-                        lavablob_encounter()
-                    elif volcana_location == 5:
-                        print(f"[ While {player_name} was walking... a SMOKEY WRAITH appeared out of nowhere! ]")
-                        wraith_encounter()
-                    elif volcana_location == 6:
-                        print(f"[ While {player_name} was walking... a PHOENIX appeared out of nowhere! ]")
-                        phoenix_encounter()
-                    else:
-                        print(f"[ While {player_name} was walking... a HELLHOUND appeared out of nowhere! ]")
-                        hellhound_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    level_up_mechanic()
-                    deciding_direction = True
-                    direction_mechanic()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-
-                while kippi_stats[0] == 100 :
-                    print("  `:--._      _.---.\n    :--:〵   .:`--.' _ _   --__     -_\n     :/ (〵^.` `./\n--__  ``〵/-==:'`     - -__     -_\n         |.--    --___     _ __--__  _\n_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n                    _ --        -_ =-_\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'O.O )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
-                    print(f"[ {player_name} ears perk up suddenly as they hear something... or someone— roaring in the distance! ]")
-                    direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ]\n")
-                    direction_choice = direction_choice.lower()
-                    while 'inventory' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
-                            direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
-                            direction_choice = direction_choice.lower()
-                    if 'inventory' in direction_choice:
-                        inventory_check()
-                    elif 'left' in direction_choice:
-                        print(f"[ As {player_name} was about to walk into the direction of where the neverending roars were coming from... a giant, red dragon slithered towards you! ]")
-                    elif 'right' or 'forward' in direction_choice:
-                        print(f"[ As {player_name} was about to walk away from the direction of where the neverending roars were coming from... a giant, red dragon slithered towards you! ]")
-                    print(f'''[ {player_name} gasps. "Z-ZEAWOUS!?" They stuttered. ]\n''')
-                    print(f"[ Although he looks a little too... small from what {player_name} has imagined, the Wizard of Pawz mentioned that he could take in any form, ferocious beast or not, so better to attack him while he's in this form! ]")
-                    zealous_encounter()
-                    if kippi_stats[3] <= 0:
-                        print(f"[ {player_name} fainted! ]")
-                        print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    print("[ After dealing the very final blow towards Zealous, he falls over, and disintegrate into a pile of ashes. ...The pile of ashes, though, proceeds to transform into a... another kitfolk!? ]")
-                    print("[ Not just any regular kitfolk, however... It's the King of Nyuwuwovilla! ]\n")
-                    king_emotes('rescued')
-                    print(''''[ "Oh, goodness gwacious... Dank you!" The king says, crying from joy. ]\n''')
-                    king_emotes('happy')
-                    print(''''[ "Y'see,  deaw, I was cuwsed bie a wizawd to tuwn into a wowowie dwagon! Awthuff I twied mie hawdest to contwow mysewf whiwe i was in dis dwaconic fowm... Da animawistic instincts ovewpowoewed mie empadatic natuwe." The king bows his head... to you! ''') 
-                    print('''[ "I deepwie apowogize fow da actions I have done towoawds you whiwe I was not wight in mie mind..." ]''')
-                    dialogue_options = range(1,3)
-                    for n in dialogue_options:
-                        if n == 1:
-                            print(f"{n}. [ Yes, I accept youw apowogy! ]")
-                        if n == 2:
-                            print(f"{n}. [ No, I don't accept youw apowogie. ]")
-                    dialogue_choice = input("[ What would you like to say to him? ]\n")
-                    while dialogue_choice not in map(str, dialogue_options):
-                        print("[ The king forces a smile, pretending to understand what you've just said. ]")
-                        dialogue_choice = input("[ What would you like to say to him? ]\n")
-                    king_emotes('possessed')
-                    print("[ Just as you were about to respond to his worries, his eyes glossed over, and his body fell backwards. Behind him... was the Wizard of Pawz!? ]")
-                    wizard_emotes('happier')
-                    print('''[ "Haw-haw-haw!" The wizard laughs. "You've been caught in my trap! Y'see, I was the dragon whom I was talking about during the first time we met. I was the one who was thrown into the seas. And I was the one who wanted anything, and everything!" ]''')
-                    print(f'''[ {player_name} gulps down their spit, not liking where this is heading... "Yes... I am... Indeed... ZEALOUS!" The wizar— actually— ZEALOUS reveals! ]''')
-                    if meanie_counter > 0:
-                        wizard_emotes('sassier')
-                        print('''[ "And y'know what? I didn't really appreciate the things you've said to me during our first meeting." Zealous scoffs. ]''')
-                        print(f'''[ "And although I have the power to simply obliterate you from the face of the Earth— I'm quite a kind-hearted person, so I wouldn't do that! Haw-haw-haw!" Zealous laughs, but {player_name} isn't. ]''')
-                        wizard_emotes('happier')
-                        print('''[ "So, instead, I shall turn you into a frog so that you could feel how it feels to be slimy! Not only on the inside, but the outside, as well!" ]''')
-                        print(f'''[ {player_name} pleaded with Zealous to change his mind, but alas, with a twirl of Zealous' paws, {player_name} turned into a frog! ]''')
-                        print("     /     〵\n     _(I)(I)_\n    ( _ .. _ )\n     `.`--'.'\n      )    (\n  ,-.!      !,-.\n ( _( ||  || )_ )\n__)  )||--||(  (__ \n`-._))||)(||((_.-'\n     `--'`--'\n")
-                        game_over = input("[ Would you like to try again? ]\n")
-                        game_over = game_over.lower()
-                        while game_over not in yes_or_no:
-                            game_over = input("[ Input not recognised. Please try again! ]")
-                            game_over = game_over.lower()
-                        if game_over == 'yes':
-                            intro_screen = False
-                            game_start = True
-                            break
-                        if game_over == 'no':
-                            game_start = False
-                            intro_screen = True
-                            break
-                    else:
-                        wizard_emotes('happy')
-                        print('''[ "But... Y'know..." Zealous has an understanding look in his eyes. "I've seen you improve not only your physical capibilities, but also your mental capilities all this while. So..." ]''')
-                        print('''[ "Why don't we both team up together? Join our forces, and we shall be UNSTOPPABLE! No one shall take us both down." Zealous proposes. ]''')
+                        print(f'''[ "Hey, you don't mind if I tawk about awmadiwwos to you, wight? I wove awmadiwwos!" He says, rather enthusiastically. ]\n''')
                         dialogue_options = range(1,3)
                         for n in dialogue_options:
                             if n == 1:
-                                print(f"{n}. [ Yes! ]")
-                            else:
-                                print(f"{n}. [ No. ]")
-                        dialogue_choice = input("[ Do you agree with him? ]\n")
+                                print(f"{n}. [ Uh... Suwe! ]")
+                            if n == 2:
+                                print(f"{n}. [ No. I'm busie. ]\n")
+                        dialogue_choice = input("[ What would you like to say to him? ]\n")
                         while dialogue_choice not in map(str, dialogue_options):
-                            print('''[ The wizard looks at you, confused. "Could you please be a bit more clearer?" ]''')
-                            dialogue_choice = input("[ Do you agree with him? ]\n")
-                        if dialogue_choice == '1':
-                            print('''[ Zealous smirks. "Haw-haw-haw! Wonderful!" ]''')
-                            print(f"[ Ever since {player_name} has agreed to Zealous' proposal, he has gone more powerful than he ever was before! Just the sight of seeing {player_name} in the streets of Nyuwuwovilla causes any kitfolk walking by to run for their lives! ]")
-                            print(f"[ ...However, one who has a non-rational mind could not predict that Zealous would ever frame {player_name} for being the sole cause of all the destruction of the world... And it worked! The Queen of Nyuwuwovilla ordered her strongest guards to capture {player_name}, keeping them locked in a jail cell for the rest of their lifespan! ]")
-                            print(f"[ {player_name} died in that very jail cell... Loved by no one, hated by everyone. ]")
+                            print('''[ "Uh... Guess we'we fwom diffewent pawts of nyuwuwoviwwa, huh? 'Cause I can't seem to undewstand you..." ]''')
+                            dialogue_choice = input("[ What would you like to say to him? ]\n")
+                        if dialogue_choice == '1' :
+                            traveller_emotes('happier')
+                            print(f'''[ "Fantastic!" He clears his throat before unleashing an ungodly amount of armadillo facts to {player_name}— ]''')
+                            armadillo_facts_moment(1)
+                        else:
+                            pass
+                        traveller_emotes('angry')
+                        print('[ The overly-talkative traveller suddenly goes quiet... ]')
+                        traveller_emotes('angrier')
+                        print('''[ "Y'knowo, I awweadie knew you wewen't actuawwie wistenim to what I was sayim... but just outwight ignowim me is extwemewie wude!" He sputters. ]''')
+                        print('''[ Although you tried your best to calm him down and tried to clarify that you were— mostly— listening to whatever he was saying, he screeches "IF YOU HATED LISTENIM TO WHAT I WAS SAYIM SO MUCH, YOU SHOULD'VE JUST WALKED AWAY!" ]''')
+                        traveller_emotes('angriest')
+                        print('''[ The traveller clapped both of his paws together, and shouted "JEREMY～!" Thinking this was one of his silly antics again, {player_name} giggled a little. Suddenly, the ground started to shake, and a big hole started to form in front of you! Running away before you could be consumed by it, you turned your back towards the strange phenomenon ocurring before your eyes, and there— comes out a BROBDINGNAGIAN ARMADILLO!? ]\n''')
+                        armadillo_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+
+            #still sahara
+            enemy_encounter_check = False
+
+            while kippi_stats[0] >= 51 and kippi_stats[0] < 75 :
+                if enemy_encounter_check == True:
+                    sahara_location = random.randint(1,8)
+                else:
+                    sahara_location = random.randint(1,3)
+                    enemy_encounter_check = True
+                if sahara_location == 1:
+                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n\n     .*.       .*.\n   , | | ,     | |\n  ||_| |_||  , | | ,\n  `--, ,--` ||_| |_||\n     | |    `--, ,--`\n     | |       | |\n     | |       | |                 _\n```````````````| |````      ``````/_〵``\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                    print(f"[ As {player_name} walks further, it seems like it's just neverending stretches of sands and cactuses around them... ]")
+                elif sahara_location == 2:
+                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                ,*-.\n                                |  |\n                            ,.  |  |\n                            | |_|  | ,.\n                            `---.  |_| |\n                                |  .--`\n                                |  |\n             _                  |  |\n````````````/_〵```````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                    print(f'''[ "Dis pwace seems... awfuwwie quiet." {player_name} thought to themselves. They keep looking behind themselves because they're afraid of being jumped on by a scary beast! ]''')
+                elif sahara_location == 3:
+                    print("        .\n     〵 | /\n    '-.;;;.-'\n   -==;;;;;==-\n    .-';;;'-.\n      / | 〵\n        '\n                                %%%,%%%%%%%\n                             ,'%% 〵〵-*%%%%%%%\n                       ;%%%%%*%   _%%%%'\n                        ,%%%       〵(_.*%%%%.\n                        % *%%, ,%%%%*(    '\n                      %^     ,*%%% )〵|,%%*%,_\n                           *%    〵/ #).-'*%%*\n                               _.) ,/ *%,\n                                /)#(\n``````````````````````      ```````````\n``````^----^`````````/     /```````````\n`````(U'ówò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````       ````````````````\n      |  | |\n      !__!_!\n\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                    random_chance_input = input(f'''[ "Oh, wook! A twee!" {player_name} exclaims. The heat is getting unbearably hot! ]\n[ Would you like to try sitting under the shady tree? ]\n''')
+                    random_chance_input = random_chance_input.lower()
+                    while random_chance_input not in yes_or_no:
+                        random_chance_input = input("[ Uh... Is that a no...? ]\n")
+                        random_chance_input = random_chance_input.lower()
+                    if random_chance_input == 'yes' :
+                        random_chance = random.randint(1,6)
+                        if random_chance == 1:
+                            print(f"[ While {player_name} was about to take a little rest, a LIZARD appeared out of nowhere! ]")
+                            lizard_encounter()
+                        elif random_chance == 2:
+                            print(f"[ While {player_name} was about to take a little rest, a SNAKE appeared out of nowhere! ]")
+                            snake_encounter()
+                        elif random_chance == 3:
+                            print(f"[ While {player_name} was about to take a little rest, an OSTRICH appeared out of nowhere! ]")
+                            ostrich_encounter()
+                        elif random_chance == 4:
+                            print(f"[ While {player_name} was about to take a little rest, a COYOTE appeared out of nowhere! ]")
+                            coyote_encounter()
+                        elif random_chance == 5:
+                            print(f"[ While {player_name} was about to take a little rest, a TORTOISE appeared out of nowhere! ]")
+                            tortoise_encounter()
+                        else:
+                            item = random.choice(uncommon_items)
+                            print(f"[ {player_name} found a {item} under the tree! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
+                            inventory.append(item)
+                    if random_chance_input == 'no' :
+                        continue
+                elif sahara_location == 4:
+                    print(f"[ While {player_name} was walking... a LIZARD appeared out of nowhere! ]")
+                    lizard_encounter()
+                elif sahara_location == 5:
+                    print(f"[ While {player_name} was walking... a SNAKE appeared out of nowhere! ]")
+                    snake_encounter()
+                elif sahara_location == 6:
+                    print(f"[ While {player_name} was walking... an OSTRICH appeared out of nowhere! ]")
+                    ostrich_encounter()
+                elif sahara_location == 7:
+                    print(f"[ While {player_name} was walking... a COYOTE appeared out of nowhere! ]")
+                    coyote_encounter()
+                else:
+                    print(f"[ While {player_name} was walking... a TORTOISE appeared out of nowhere! ]")
+                    tortoise_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+
+            while kippi_stats[0] == 75 :
+                print(f'''[ "Gosh, I'm so diwsty!" {player_name} thought to themselves. ]''')
+                print(f"[ While {player_name} was fantisizing about how amazing it could be if {player_name} could drink from, or even bathe in a cold, refreshing oasis... The grounds of Sahara started to crack, pulling {player_name} away from their thoughts! ]")
+                print("     .*.       .*.\n   , | | ,     | |\n  ||_| |_||  , | | ,\n  `--, ,--` ||_| |_||\n     | |    `--, ,--`\n     | |       | |\n     | |       | |                 _\n```````````````| |````      ``````/_〵``\n``````^----^`````````/     /```````````\n`````(U'ó.ò )```````/     /````````````\n`````|     ||``````/     /```_`````````\n``_``| |   ||`````/     /```/_〵```````\n``||_!_|   |!````/     /```````````````\n  `---|  T |````    |  ````````````````\n      |  | |     〵___〵_`__._`___`__/_\n      !__!_!        __`__/〵`__  〵\n                   /           〵\n````````````````       ````````````````\n````````````````〵     〵``````````````")
+                print(f'''[ "W-What is goim on!?" {player_name} shouted. Almost answering their question, a gigantic dinosaur erupted from the cracks; leaving debris of sand everywhere, even on {player_name}'s fur! ]''')
+                print(f'''[ "Didn't dinosauws went extinct 5000 yeaws ago!? Gwah! Nowo I have to fight one!" {player_name} screamed at themselves, mentally. ]''')
+                behemoth_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                          os.remove("kippi_save.txt")
+                        else:
+                          pass
+                        break
+                #cutscene 3
+                print(f'''[ "Woah!" The wizard's voice in {player_name} brain echoes. "Not to be wude, but wowo! I didn't expect dat you'd defeat dat monstew! I mean, it was ten feet tawwew dan you!" Although {player_name} couldn't see the wizard, they could tell that he was scoffing. ]''')
+                print(f'''[ "I knew it wasn't a mistake choosim you as mie mentee!" He praises. {player_name} could feel their self-esteem rising hearing those words from a world-renowned wizard! ]\n''')
+                print('''[ "Nowo, da next and finaw chawwenge might be a wittwe too tuff fow you..." The wizard warns. "Because we'we about to head ovew to..." ]''')
+                print('''                        (   (( . : (    .)   ) :  )\n                          (   ( :  .  :    :  )  ))\n                           ( ( ( (  .  :  . . ) )\n                            ( ( : :  :  )   )  )\n                             ( :(   .   .  ) .'\n                              '. :(   :    )\n                                (   :  . )  )\n                                 ')   :   #@##\n                                #',### " #@  #@\n                               #/ @'#~@#~/〵  #\n                             ##  @@# @##@  `..@,\n                           @#/  #@#   _##     `〵\n                         @##;  `#~._.' ##@      〵.\n                       .-#/           @#@#@--,_,--〵\n                      / `@#@..,     .~###'         `~.\n                    _/         `-.-' #@####@          〵\n                 __/     &^^       ^#^##~##&&&   %     〵.\n                /       && ^^      @#^##@#%%#@&&&&  ^    〵\n              ~/         &&&    ^^^   ^^   &&&  %%% ^^^   `~._\n           .-'   ^^    %%%. &&   ___^     &&   && &&   ^^     〵\n          /akg ^^^ ___&&& X & && |n|   ^ ___ %____&& . ^^^^^   `~.\n                   |M|       ---- .  ___.|n| /〵___〵  X\n                             |mm| X  |n|X    ||____|''')
+                print('''[ "VOLCANA, DA PLACE WHERE ZEALOUS IS RESIDING!" The wizard says, perhaps a litte too entusiastically. ]\n''')
+                print(f'''[ "...Wait, I'm gonna fight Zeawous!?" A thought just crossed {player_name}'s mind. ]''')
+                print(f"[ Just as {player_name} was about to ask for clarification whether they will or will not be defeating a huge dragon— twenty times the size as a regular kitfolk, like themselves, the wizard, of course, doesn't respond to their inquiries. ]")
+                print(f'''[ "That wizawd bettew tweat me to a nice, fishie dinnew aftew dis!" {player_name} internally cursed to themselves. ]''')
+
+            #volcana
+            enemy_encounter_check = False
+            while kippi_stats[0] >= 76 and kippi_stats[0] < 100 :
+                if enemy_encounter_check == True:
+                    volcana_location = random.randint(1,7)
+                else:
+                    volcana_location = random.randint(1,3)
+                    enemy_encounter_check = True
+                if volcana_location == 1:
+                    print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n                    _ --        -_ =-_\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'ó-ò )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                    print(f'''[ "This pwace is... swewtewimwie hot!" {player_name} mutters to themselves. They feel like they could melt into a puddle at any moment! ]''')
+                elif volcana_location == 2:
+                    print("  `:--._      _.---.\n    :--:〵   .:`--.' _ _   --__     -_\n     :/ (〵^.` `./\n--__  ``〵/-==:'`     - -__     -_\n         |.--    --___     _ __--__  _\n_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n                    _ --        -_ =-_\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'O.O )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                    print(f"[ {player_name} ears perk up suddenly as they hear something... or someone— roaring in the distance! ]")
+                elif volcana_location == 3:
+                    print("_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n --                 _ --        -_ =-_\n     --  --               __   ___   .-\n       --___     _ __--__     (0.0)\n --                            |m|〵\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'ó,ò )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                    random_chance_input = input(f"[ Oh, look! It's a... skull... ]\n[ Would you like to check out what's inside of it... for some reason? ]\n")
+                    random_chance_input = random_chance_input.lower()
+                    while random_chance_input not in yes_or_no:
+                        random_chance_input = input("[ Uh... Is that a no...? ]\n")
+                        random_chance_input = random_chance_input.lower()
+                    if random_chance_input == 'yes' :
+                        random_chance = random.randint(1,5)
+                        if random_chance == 1:
+                            print(f"[ Uh, oh! Turns out the skull... was actually a SKELETON THAT'S ALIVE!? ]")
+                            skeleton_encounter()
+                        else:
+                            item = random.choice(uncommon_items)
+                            print(f"[ {player_name} found a {item} in the... skull! {player_name} decided to stuff it into their handy-dandy backpack. Just in case! ]\n")
+                            inventory.append(item)
+                    if random_chance_input == 'no' :
+                        continue
+                elif volcana_location == 4:
+                    print(f"[ While {player_name} was walking... an UNASSUMING BLOB OF LAVA appeared out of nowhere! ]")
+                    lavablob_encounter()
+                elif volcana_location == 5:
+                    print(f"[ While {player_name} was walking... a SMOKEY WRAITH appeared out of nowhere! ]")
+                    wraith_encounter()
+                elif volcana_location == 6:
+                    print(f"[ While {player_name} was walking... a PHOENIX appeared out of nowhere! ]")
+                    phoenix_encounter()
+                else:
+                    print(f"[ While {player_name} was walking... a HELLHOUND appeared out of nowhere! ]")
+                    hellhound_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        break
+                level_up_mechanic()
+                deciding_direction = True
+                direction_mechanic()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        break
+
+            while kippi_stats[0] == 100 :
+                print("  `:--._      _.---.\n    :--:〵   .:`--.' _ _   --__     -_\n     :/ (〵^.` `./\n--__  ``〵/-==:'`     - -__     -_\n         |.--    --___     _ __--__  _\n_ _   --           - -__     -_\n       --  --___     _ __--__ -= _\n                    _ --        -_ =-_\n#.#.#.#.#.#.#.##.#.#.#/`````/#.#.#.#.#.\n#.#.#.^----^#.#.#.#.#/`````/#.#.#.#.#.#\n#.#.#(U'O.O )#.#.#.#/`````/#.#.#.#.#.#.\n#.#.#|     ||#.#.#./`````/#.#.#.#.#.#.#\n#._#.| |   ||#.#.#/`````/#.#.#.#.#.#.#.\n#.||_!_|   |!#.#./`````/#.#.#.#.#.#.#.#\n```---|  T |````  ```` ````````````````\n``````|  | |```````````````````````````\n````` !__!_!```````````````````````````\n```````````````````````````````````````\n#.#.#.#.#.#.#.#.〵`````〵#.#.#.#.#.#.#.\n#.#.#.#.#.#.#.#.#〵`````〵#.#.#.#.##.#.")
+                print(f"[ {player_name} ears perk up suddenly as they hear something... or someone— roaring in the distance! ]")
+                direction_choice = input("[ What shall you do? ]\n[ WALK RIGHT ] [ WALK LEFT ] [ WALK FORWARD ] [ CHECK INVENTORY ]\n")
+                direction_choice = direction_choice.lower()
+                while 'inventory' not in direction_choice and 'right' not in direction_choice and 'left' not in direction_choice and 'forward' not in direction_choice:
+                        direction_choice = input("[ Uh... Your command seems to not be clear enough. Perhaps you could try again? ]\n")
+                        direction_choice = direction_choice.lower()
+                if 'inventory' in direction_choice:
+                    inventory_check()
+                elif 'left' in direction_choice:
+                    print(f"[ As {player_name} was about to walk into the direction of where the neverending roars were coming from... a giant, red dragon slithered towards you! ]")
+                elif 'right' or 'forward' in direction_choice:
+                    print(f"[ As {player_name} was about to walk away from the direction of where the neverending roars were coming from... a giant, red dragon slithered towards you! ]")
+                print(f'''[ {player_name} gasps. "Z-ZEAWOUS!?" They stuttered. ]\n''')
+                print(f"[ Although he looks a little too... small from what {player_name} has imagined, the Wizard of Pawz mentioned that he could take in any form, ferocious beast or not, so better to attack him while he's in this form! ]")
+                zealous_encounter()
+                if kippi_stats[3] <= 0:
+                    print(f"[ {player_name} fainted! ]")
+                    print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
+                    print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        break
+                print("[ After dealing the very final blow towards Zealous, he falls over, and disintegrate into a pile of ashes. ...The pile of ashes, though, proceeds to transform into a... another kitfolk!? ]")
+                print("[ Not just any regular kitfolk, however... It's the King of Nyuwuwovilla! ]\n")
+                king_emotes('rescued')
+                print(''''[ "Oh, goodness gwacious... Dank you!" The king says, crying from joy. ]\n''')
+                king_emotes('happy')
+                print(''''[ "Y'see,  deaw, I was cuwsed bie a wizawd to tuwn into a wowowie dwagon! Awthuff I twied mie hawdest to contwow mysewf whiwe i was in dis dwaconic fowm... Da animawistic instincts ovewpowoewed mie empadatic natuwe." The king bows his head... to you! ''') 
+                print('''[ "I deepwie apowogize fow da actions I have done towoawds you whiwe I was not wight in mie mind..." ]''')
+                dialogue_options = range(1,3)
+                for n in dialogue_options:
+                    if n == 1:
+                        print(f"{n}. [ Yes, I accept youw apowogy! ]")
+                    if n == 2:
+                        print(f"{n}. [ No, I don't accept youw apowogie. ]")
+                dialogue_choice = input("[ What would you like to say to him? ]\n")
+                while dialogue_choice not in map(str, dialogue_options):
+                    print("[ The king forces a smile, pretending to understand what you've just said. ]")
+                    dialogue_choice = input("[ What would you like to say to him? ]\n")
+                king_emotes('possessed')
+                print("[ Just as you were about to respond to his worries, his eyes glossed over, and his body fell backwards. Behind him... was the Wizard of Pawz!? ]")
+                wizard_emotes('happier')
+                print('''[ "Haw-haw-haw!" The wizard laughs. "You've been caught in my trap! Y'see, I was the dragon whom I was talking about during the first time we met. I was the one who was thrown into the seas. And I was the one who wanted anything, and everything!" ]''')
+                print(f'''[ {player_name} gulps down their spit, not liking where this is heading... "Yes... I am... Indeed... ZEALOUS!" The wizar— actually— ZEALOUS reveals! ]''')
+                if meanie_counter > 0:
+                    wizard_emotes('sassier')
+                    print('''[ "And y'know what? I didn't really appreciate the things you've said to me during our first meeting." Zealous scoffs. ]''')
+                    print(f'''[ "And although I have the power to simply obliterate you from the face of the Earth— I'm quite a kind-hearted person, so I wouldn't do that! Haw-haw-haw!" Zealous laughs, but {player_name} isn't. ]''')
+                    wizard_emotes('happier')
+                    print('''[ "So, instead, I shall turn you into a frog so that you could feel how it feels to be slimy! Not only on the inside, but the outside, as well!" ]''')
+                    print(f'''[ {player_name} pleaded with Zealous to change his mind, but alas, with a twirl of Zealous' paws, {player_name} turned into a frog! ]''')
+                    print("     /     〵\n     _(I)(I)_\n    ( _ .. _ )\n     `.`--'.'\n      )    (\n  ,-.!      !,-.\n ( _( ||  || )_ )\n__)  )||--||(  (__ \n`-._))||)(||((_.-'\n     `--'`--'\n")
+                    game_over = input("[ Would you like to try again? ]\n")
+                    game_over = game_over.lower()
+                    while game_over not in yes_or_no:
+                        game_over = input("[ Input not recognised. Please try again! ]")
+                        game_over = game_over.lower()
+                    if game_over == 'yes':
+                        intro_screen = False
+                        game_start = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        continue_game = False
+                        break
+                    if game_over == 'no':
+                        game_start = False
+                        intro_screen = True
+                        if os.path.exists("kippi_save.txt"):
+                            os.remove("kippi_save.txt")
+                        else:
+                            pass
+                        break
+                else:
+                    wizard_emotes('happy')
+                    print('''[ "But... Y'know..." Zealous has an understanding look in his eyes. "I've seen you improve not only your physical capibilities, but also your mental capilities all this while. So..." ]''')
+                    print('''[ "Why don't we both team up together? Join our forces, and we shall be UNSTOPPABLE! No one shall take us both down." Zealous proposes. ]''')
+                    dialogue_options = range(1,3)
+                    for n in dialogue_options:
+                        if n == 1:
+                            print(f"{n}. [ Yes! ]")
+                        else:
+                            print(f"{n}. [ No. ]")
+                    dialogue_choice = input("[ Do you agree with him? ]\n")
+                    while dialogue_choice not in map(str, dialogue_options):
+                        print('''[ The wizard looks at you, confused. "Could you please be a bit more clearer?" ]''')
+                        dialogue_choice = input("[ Do you agree with him? ]\n")
+                    if dialogue_choice == '1':
+                        print('''[ Zealous smirks. "Haw-haw-haw! Wonderful!" ]''')
+                        print(f"[ Ever since {player_name} has agreed to Zealous' proposal, he has gone more powerful than he ever was before! Just the sight of seeing {player_name} in the streets of Nyuwuwovilla causes any kitfolk walking by to run for their lives! ]")
+                        print(f"[ ...However, one who has a non-rational mind could not predict that Zealous would ever frame {player_name} for being the sole cause of all the destruction of the world... And it worked! The Queen of Nyuwuwovilla ordered her strongest guards to capture {player_name}, keeping them locked in a jail cell for the rest of their lifespan! ]")
+                        print(f"[ {player_name} died in that very jail cell... Loved by no one, hated by everyone. ]")
+                        print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+                        game_over = input("[ Would you like to try again? ]\n")
+                        game_over = game_over.lower()
+                        while game_over not in yes_or_no:
+                            game_over = input("[ Input not recognised. Please try again! ]")
+                            game_over = game_over.lower()
+                        if game_over == 'yes':
+                            intro_screen = False
+                            game_start = True
+                            if os.path.exists("kippi_save.txt"):
+                                os.remove("kippi_save.txt")
+                            else:
+                                pass
+                            continue_game = False
+                            break
+                        if game_over == 'no':
+                            game_start = False
+                            intro_screen = True
+                            if os.path.exists("kippi_save.txt"):
+                                os.remove("kippi_save.txt")
+                            else:
+                                pass
+                            break
+                    else:
+                        print("[ Zealous frowns. ]")
+                        print('''[ "Hah! Fine, then. Act that way. Let's see how you'll match with my unbridled fury!" Zealous booms. ]''')
+                        zealous_the_real_one_encounter()
+                        if kippi_stats[3] <= 0:
+                            print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
                             print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
                             game_over = input("[ Would you like to try again? ]\n")
                             game_over = game_over.lower()
@@ -6786,47 +6466,43 @@ while game_state == True:
                             if game_over == 'yes':
                                 intro_screen = False
                                 game_start = True
+                                if os.path.exists("kippi_save.txt"):
+                                    os.remove("kippi_save.txt")
+                                else:
+                                    pass
+                                continue_game = False
                                 break
                             if game_over == 'no':
                                 game_start = False
                                 intro_screen = True
+                                if os.path.exists("kippi_save.txt"):
+                                    os.remove("kippi_save.txt")
+                                else:
+                                    pass
                                 break
-                        else:
-                            print("[ Zealous frowns. ]")
-                            print('''[ "Hah! Fine, then. Act that way. Let's see how you'll match with my unbridled fury!" Zealous booms. ]''')
-                            zealous_the_real_one_encounter()
-                            if kippi_stats[3] <= 0:
-                                print(f"[ {player_name} fainted! ]")
-                                print("[ As your life flashes before your tiny eyes... You wondered whether your fate would've stayed the same if you did anything different...? ]")
-                                print("        _.---,._,'\n       /' _.--.<\n         /'     `'                                 ____\n       /' _.---._____                           __(_   )__\n       〵.'   ___, .-'`                       _(          )\n           /'    〵.                         (     )-----`\n         /'       `-.  ,-                     `---'\n        |\n        |                   .-------.\n        |                 .'         `.\n        |                 |  H E R E  |\n        |                 |           |\n        |                 |  L I E S  |\n        |                 |           |\n        |                 | K I P P I |\n        |                 |           | **\n        !                 |           |//\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
-                                game_over = input("[ Would you like to try again? ]\n")
-                                game_over = game_over.lower()
-                                while game_over not in yes_or_no:
-                                    game_over = input("[ Input not recognised. Please try again! ]")
-                                    game_over = game_over.lower()
-                                if game_over == 'yes':
-                                    intro_screen = False
-                                    game_start = True
-                                    break
-                                if game_over == 'no':
-                                    game_start = False
-                                    intro_screen = True
-                                    break
-                            print("             .#############. \n          .###################. \n       .####%####################.,::;;;;;;;;;;, \n      .####%###############%######:::;;;;;;;;;;;;;, \n      ####%%################%######:::;;;;;;;;@;;;;;;, \n      ####%%################%%#####:::;;;;;;;;;@;;;;;;, \n      ####%%################%%#####:::;;;;;;;;;@@;;;;;; \n      `####%################%#####:::;;;;;;;;;;@@;;;;;; \n        `###%##############%####:::;;;;;;;;;;;;@@;;;;;; \n           `#################'::%%%%%%%%%%%%;;;@;;;;;;' \n             `#############'.%%%%%%%%%%%%%%%%%%;;;;;' \n               `#########'%%%%#%%%%%%%%%%%%%%%%%%%, \n                 `#####'.%%%%#%%%%%%%%%%%%%%#%%%%%%, \n                   `##' %%%%##%%%%%%%%%%%%%%%##%%%%% \n                   ###  %%%%##%%%%%%%%%%%%%%%##%%%%% \n                    '   %%%%##%%%%%%%%%%%%%%%##%%%%% \n                   '    `%%%%#%%%%%%%%%%%%%%%#%%%%%' \n                  '       `%%%#%%%%%%%%%%%%%#%%%%' \n                  `         `%%%%%%%%%%%%%%%%%%' \n                   `          `%%%%%%%%%%%%%%' \n                    `           `%%%%%%%%%%'  ' \n                     '            `%%%%%%'   ' \n                    '              `%%%'    ' \n                   '               .%%      ` \n                  `                %%%       ' \n                   `                '       ' \n                    `              '      ' \n                    '            '      ' \n                   '           '       ` \n                  '           '        ' \n                              `       ' \n                               ' \n                              ' \n                             ' \n\n\na@@@@@@@@a  a@@@@@@a  a@@@@@@@a a@@@@@@@@a a@@a.  .a@@a  a@@a \n@@@@  @@@@ @@@@  @@@@ @@@@  @@@ @@@@@@@@@@ @@@@a  a@@@@  @@@@ \n@@@@  @@@@ @@@@  @@@@ @@@@  @@@    @@@@    `@@@@  @@@@'  @@@@ \n@@@@@@@@@@ @@@@@@@@@@ @@@@@@@@'    @@@@      `@@@@@@'    @@@@ \n@@@@@@@@@' @@@@@@@@@@ @@@@@@@@a    @@@@        @@@@      `@@' \n@@@@       @@@@  @@@@ @@@@ @@@@    @@@@        @@@@ \n@@@@       @@@@  @@@@ @@@@ @@@@    @@@@        @@@@       @@\n")
-                            print("[ Congratulations! You've just saved the kingdom of Nyuwuwoville from being caught up in flames! ]")
-                            print("[ Every kitfolk in the kingdom appreciates you now, and they won't throw stones at you whenever they see you! ]")
-                            print("[ Is this what they call a... happy ending? ]\n")
-                            game_over = input("[ Would you like to try again? ]\n")
+                        print("             .#############. \n          .###################. \n       .####%####################.,::;;;;;;;;;;, \n      .####%###############%######:::;;;;;;;;;;;;;, \n      ####%%################%######:::;;;;;;;;@;;;;;;, \n      ####%%################%%#####:::;;;;;;;;;@;;;;;;, \n      ####%%################%%#####:::;;;;;;;;;@@;;;;;; \n      `####%################%#####:::;;;;;;;;;;@@;;;;;; \n        `###%##############%####:::;;;;;;;;;;;;@@;;;;;; \n           `#################'::%%%%%%%%%%%%;;;@;;;;;;' \n             `#############'.%%%%%%%%%%%%%%%%%%;;;;;' \n               `#########'%%%%#%%%%%%%%%%%%%%%%%%%, \n                 `#####'.%%%%#%%%%%%%%%%%%%%#%%%%%%, \n                   `##' %%%%##%%%%%%%%%%%%%%%##%%%%% \n                   ###  %%%%##%%%%%%%%%%%%%%%##%%%%% \n                    '   %%%%##%%%%%%%%%%%%%%%##%%%%% \n                   '    `%%%%#%%%%%%%%%%%%%%%#%%%%%' \n                  '       `%%%#%%%%%%%%%%%%%#%%%%' \n                  `         `%%%%%%%%%%%%%%%%%%' \n                   `          `%%%%%%%%%%%%%%' \n                    `           `%%%%%%%%%%'  ' \n                     '            `%%%%%%'   ' \n                    '              `%%%'    ' \n                   '               .%%      ` \n                  `                %%%       ' \n                   `                '       ' \n                    `              '      ' \n                    '            '      ' \n                   '           '       ` \n                  '           '        ' \n                              `       ' \n                               ' \n                              ' \n                             ' \n\n\na@@@@@@@@a  a@@@@@@a  a@@@@@@@a a@@@@@@@@a a@@a.  .a@@a  a@@a \n@@@@  @@@@ @@@@  @@@@ @@@@  @@@ @@@@@@@@@@ @@@@a  a@@@@  @@@@ \n@@@@  @@@@ @@@@  @@@@ @@@@  @@@    @@@@    `@@@@  @@@@'  @@@@ \n@@@@@@@@@@ @@@@@@@@@@ @@@@@@@@'    @@@@      `@@@@@@'    @@@@ \n@@@@@@@@@' @@@@@@@@@@ @@@@@@@@a    @@@@        @@@@      `@@' \n@@@@       @@@@  @@@@ @@@@ @@@@    @@@@        @@@@ \n@@@@       @@@@  @@@@ @@@@ @@@@    @@@@        @@@@       @@\n")
+                        print("[ Congratulations! You've just saved the kingdom of Nyuwuwoville from being caught up in flames! ]")
+                        print("[ Every kitfolk in the kingdom appreciates you now, and they won't throw stones at you whenever they see you! ]")
+                        print("[ Is this what they call a... happy ending? ]\n")
+                        game_over = input("[ Would you like to try again? ]\n")
+                        game_over = game_over.lower()
+                        while game_over not in yes_or_no:
+                            game_over = input("[ Input not recognised. Please try again! ]")
                             game_over = game_over.lower()
-                            while game_over not in yes_or_no:
-                                game_over = input("[ Input not recognised. Please try again! ]")
-                                game_over = game_over.lower()
-                            if game_over == 'yes':
-                                intro_screen = False
-                                game_start = True
-                                break
-                            if game_over == 'no':
-                                game_start = False
-                                intro_screen = True
-                                break
-                    break
+                        if game_over == 'yes':
+                            intro_screen = False
+                            game_start = True
+                            if os.path.exists("kippi_save.txt"):
+                                os.remove("kippi_save.txt")
+                            else:
+                                pass
+                            continue_game = False
+                            break
+                        if game_over == 'no':
+                            game_start = False
+                            intro_screen = True
+                            if os.path.exists("kippi_save.txt"):
+                                os.remove("kippi_save.txt")
+                            else:
+                                pass
+                            break
