@@ -4,9 +4,6 @@
 # Class: TL9L
 # Year: 2023/24 Trimester 1
 # Names: ALESHA NOOR | AMIRAH BALQIS | ARIANA FALISYA
-# IDs: 1221106012 | 1221106080 | 1221109501
-# Emails: 1221106012@student.mmu.edu.my | 1221106080@student.mmu.edu.my | 1221109501@student.mmu.edu.my
-# Phones: 018-789-3381 | 013-3976759 | 013-4368182
 # ******************************************************************************************************
 
 #we use this to do all the random chances that is involved in our game. makes it more fun, hehe!
